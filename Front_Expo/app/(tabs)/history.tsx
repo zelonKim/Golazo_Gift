@@ -22,14 +22,14 @@ const { width } = Dimensions.get("window");
 interface GiftEvent {
   id: number;
   purpose: string;
-  purpose_display: string; // 장고 choices의 가독성 좋은 한글 라벨
+  purpose_display: string; // Django choices의 영문 라벨 (예: "Friend's BDay")
   min_budget: number;
   max_budget: number;
   created_at: string;
-  recipient_name: string; // 누구에게 준 선물인지 표시하기 위함
+  recipient_name: string; // 수령인 이름
 }
 
-// 목적별 어울리는 귀여운 이모지 매핑 딕셔너리
+// 🎯 보내주신 PURPOSE_LIST와 100% 매칭시킨 이모지 딕셔너리
 const PURPOSE_EMOJIS: Record<string, string> = {
   FRIEND_BDAY: "🎂",
   LOVER_BDAY: "❤️",
@@ -38,8 +38,17 @@ const PURPOSE_EMOJIS: Record<string, string> = {
   WED_ANNIV: "💍",
   GRADUATE: "🎓",
   EMPLOY: "💼",
-  HOUSE: "🏠",
+  HOUSEWARMING: "🏠",
+  WEDDING: "🔔",
+  BRIDAL_SHOWER: "👰",
+  BABY_SHOWER: "🍼",
   BIRTH: "👶",
+  CHRISTMAS: "🎄",
+  VALENTINE: "💝",
+  MOTHERS_DAY: "👩",
+  FATHERS_DAY: "👨",
+  THANK_YOU: "🙏",
+  GET_WELL: "🩹",
   SELF_GIFT: "🎁",
 };
 
@@ -74,10 +83,13 @@ export default function HistoryScreen() {
     },
     onError: (error: any) => {
       console.error(
-        "추천 기록 삭제 실패:",
+        "Failed to delete recommendation history:",
         error.response?.data || error.message,
       );
-      Alert.alert("삭제 실패 🥲", "기록을 삭제하는 도중 문제가 발생했습니다.");
+      Alert.alert(
+        "Error 🥲",
+        "Something went wrong while deleting this history.",
+      );
     },
   });
 
@@ -98,9 +110,7 @@ export default function HistoryScreen() {
     });
   }, [userProfile]);
 
-  // 📊 대시보드용 통계 데이터 실시간 계산 (평탄화된 events 리스트 기반)
-  const totalCount = events.length;
-
+  // 📊 대시보드용 통계 데이터 실시간 계산
   const totalMinBudget = events.reduce(
     (sum: number, item: any) => sum + (item.min_budget || 0),
     0,
@@ -111,24 +121,25 @@ export default function HistoryScreen() {
     0,
   );
 
+  // 💰 달러($) 포맷팅 함수
   const formatSummaryPrice = (price: number) => {
-    if (price === 0) return "0원";
-    if (price >= 10000) {
-      return `${(price / 10000).toFixed(1).replace(".0", "")}만원`;
-    }
-    return `${price.toLocaleString()}원`;
+    return `$${price.toLocaleString("en-US")}`;
   };
 
   // 🗑️ 꾹 눌렀을 때 띄워줄 실수 방지용 삭제 컨펌 알림창
-  const handleLongPress = (eventId: number, name: string, purpose: string) => {
-    Alert.alert("⚠️삭제 확인 ", `정말로 해당 추천 기록을 삭제하시겠습니까?`, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제하기",
-        style: "destructive",
-        onPress: () => deleteEventMutation.mutate(eventId),
-      },
-    ]);
+  const handleLongPress = (eventId: number, name: string) => {
+    Alert.alert(
+      "⚠️ Delete History",
+      `Are you sure you want to delete the gift history for ${name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteEventMutation.mutate(eventId),
+        },
+      ],
+    );
   };
 
   return (
@@ -144,7 +155,7 @@ export default function HistoryScreen() {
       {isLoading ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
-          <Text style={styles.loadingText}>지난 기록들을 불러오는 중...</Text>
+          <Text style={styles.loadingText}>Loading your history...</Text>
         </View>
       ) : (
         <ScrollView
@@ -153,7 +164,7 @@ export default function HistoryScreen() {
         >
           {/* 🏆 2. 몽글몽글 대시보드 통계 카드 */}
           <View style={styles.summaryCard}>
-            {/* 왼쪽 탭: 최소 예산 대시보드 */}
+            {/* 최소 예산 대시보드 */}
             <View style={styles.summaryItem}>
               <View style={[styles.iconBg, { backgroundColor: "#E6F7FF" }]}>
                 <Gift size={22} color="#1890FF" />
@@ -161,12 +172,12 @@ export default function HistoryScreen() {
               <Text style={styles.summaryCount}>
                 {formatSummaryPrice(totalMinBudget)}
               </Text>
-              <Text style={styles.summaryLabel}>마음을 담은 최소 예산</Text>
+              <Text style={styles.summaryLabel}>Total Min Budget</Text>
             </View>
 
             <View style={styles.dividerLine} />
 
-            {/* 오른쪽 탭: 최대 예산 */}
+            {/* 최대 예산 대시보드 */}
             <View style={styles.summaryItem}>
               <View style={[styles.iconBg, { backgroundColor: "#FFF9E6" }]}>
                 <Gift size={22} color="#FFB800" />
@@ -174,7 +185,7 @@ export default function HistoryScreen() {
               <Text style={styles.summaryCount}>
                 {formatSummaryPrice(totalMaxBudget)}
               </Text>
-              <Text style={styles.summaryLabel}>마음을 담은 최대 예산</Text>
+              <Text style={styles.summaryLabel}>Total Max Budget</Text>
             </View>
           </View>
 
@@ -184,32 +195,28 @@ export default function HistoryScreen() {
               <View style={{ marginTop: Platform.OS === "android" ? 5 : 1 }}>
                 <NotepadText size={23} color={"#FF7096"} />
               </View>
-              <Text style={styles.sectionTitle}>지난 기록들 </Text>
+              <Text style={styles.sectionTitle}>Past Events</Text>
             </View>
             {events.length > 0 ? (
               events.map((item) => {
                 const displayDate = item.created_at
-                  ? new Date(item.created_at).toLocaleDateString("ko-KR", {
+                  ? new Date(item.created_at).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                     })
-                  : "날짜 미지정";
+                  : "Date not set";
 
+                // 💡 전달해주신 PURPOSE_LIST 기준 키값에 맞춰 이모지가 유연하게 들어갑니다!
                 const emoji = PURPOSE_EMOJIS[item.purpose] || "💝";
 
                 return (
-                  /* ⭐️ 꾹 눌렀을 때 삭제 액션이 실행되도록 TouchableOpacity로 감싸고 매핑 완료! */
                   <TouchableOpacity
                     key={item.id}
                     style={styles.historyCard}
                     activeOpacity={0.8}
                     onLongPress={() =>
-                      handleLongPress(
-                        item.id,
-                        item.recipient_name,
-                        item.purpose_display,
-                      )
+                      handleLongPress(item.id, item.recipient_name)
                     }
                   >
                     {/* 카드 상단: 이모지 + 타이틀 + 완료 체크 배지 */}
@@ -237,11 +244,11 @@ export default function HistoryScreen() {
 
                     <View style={styles.cardDivider} />
 
-                    {/* 카드 하단 터치 영역: 누르면 해당 recommendResult.tsx로 점프! */}
+                    {/* 카드 하단 터치 영역 */}
                     <TouchableOpacity
                       style={styles.giftDetailRow}
                       onPress={() => {
-                        console.log("아이템 아이디", item.id);
+                        console.log("Event ID:", item.id);
                         router.push({
                           pathname: "/recommendResult",
                           params: { event_id: item.id },
@@ -249,14 +256,14 @@ export default function HistoryScreen() {
                       }}
                     >
                       <View>
-                        <Text style={styles.giftLabel}>예산 범위</Text>
+                        <Text style={styles.giftLabel}>Budget Range</Text>
                         <Text style={styles.giftNameText}>
-                          {item.min_budget.toLocaleString()}원 ~{" "}
-                          {item.max_budget.toLocaleString()}원
+                          {formatSummaryPrice(item.min_budget)} ~{" "}
+                          {formatSummaryPrice(item.max_budget)}
                         </Text>
                       </View>
                       <View style={styles.priceContainer}>
-                        <Text style={styles.priceText}>선물 보기</Text>
+                        <Text style={styles.priceText}>View Gifts</Text>
                         <ChevronRight
                           size={14}
                           color="#FF7096"
@@ -275,7 +282,7 @@ export default function HistoryScreen() {
                   style={{ marginBottom: 10 }}
                 />
                 <Text style={styles.emptyText}>
-                  아직 추천받은 내역이 없어요.
+                  No recommendation history yet.
                 </Text>
               </View>
             )}
@@ -286,10 +293,9 @@ export default function HistoryScreen() {
   );
 }
 
+// 스타일 시트는 기존 파일과 완전히 동일합니다. (생략)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -319,7 +325,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#757580",
   },
-  /* 🏆 상단 요약 대시보드 카드 */
   summaryCard: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -335,35 +340,17 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  iconBg: {
-    padding: 10,
-    borderRadius: 50,
-    marginBottom: 8,
-  },
-  summaryCount: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#2D2D3A",
-  },
+  summaryItem: { flex: 1, alignItems: "center" },
+  iconBg: { padding: 10, borderRadius: 50, marginBottom: 8 },
+  summaryCount: { fontSize: 18, fontWeight: "900", color: "#2D2D3A" },
   summaryLabel: {
     fontSize: 12,
     color: "#757580",
-    marginTop: 2,
+    marginTop: 4,
     fontWeight: "600",
   },
-  dividerLine: {
-    width: 1.5,
-    height: "60%",
-    backgroundColor: "#F6F6FA",
-  },
-  /* 🕒 히스토리 리스트 구조 */
-  sectionContainer: {
-    marginTop: 4,
-  },
+  dividerLine: { width: 1.5, height: "60%", backgroundColor: "#F6F6FA" },
+  sectionContainer: { marginTop: 4 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
@@ -390,22 +377,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 8,
   },
-  cardEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#2D2D3A",
-  },
-  cardDate: {
-    fontSize: 12,
-    color: "#AEAEB2",
-    marginTop: 3,
-    fontWeight: "500",
-  },
-  /* 완료 태그 */
+  cardEmoji: { fontSize: 24, marginRight: 12 },
+  cardTitle: { fontSize: 15, fontWeight: "800", color: "#2D2D3A" },
+  cardDate: { fontSize: 12, color: "#AEAEB2", marginTop: 3, fontWeight: "500" },
   successBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -414,17 +388,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 50,
   },
-  successText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#FF7096",
-  },
-  cardDivider: {
-    height: 1.5,
-    backgroundColor: "#FDF4F6",
-    marginVertical: 14,
-  },
-  /* 하단 기프트 정보 */
+  successText: { fontSize: 11, fontWeight: "800", color: "#FF7096" },
+  cardDivider: { height: 1.5, backgroundColor: "#FDF4F6", marginVertical: 14 },
   giftDetailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -433,35 +398,19 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 18,
   },
-  giftLabel: {
-    fontSize: 11,
-    color: "#A0A0AB",
-    fontWeight: "600",
-  },
+  giftLabel: { fontSize: 11, color: "#A0A0AB", fontWeight: "600" },
   giftNameText: {
     fontSize: 13,
     fontWeight: "700",
     color: "#4A4A5A",
     marginTop: 2,
   },
-  priceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  priceText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#FF7096",
-  },
+  priceContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
+  priceText: { fontSize: 13, fontWeight: "800", color: "#FF7096" },
   emptyContainer: {
     paddingVertical: 40,
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#AEAEB2",
-  },
+  emptyText: { fontSize: 13, fontWeight: "600", color: "#AEAEB2" },
 });

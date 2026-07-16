@@ -20,7 +20,6 @@ urlpatterns = [
         RecipientDetailView.as_view(),
         name="recipient_read_update_delete",
     ),
-    
     # 상대방에 대한 이벤트 CRUD
     path(
         "recipient/<int:recipient_id>/event/",
@@ -32,21 +31,18 @@ urlpatterns = [
         EventDetailView.as_view(),
         name="event_read_update_delete",
     ),
-    
     # 특정 이벤트에 대한 AI 선물 추천 수행
     path(
         "event/<int:event_id>/recommend/",
         GiftRecommendView.as_view(),
         name="gift-recommend_create",
     ),
-    
     #  특정 이벤트에 대한 AI 추천 상품 목록 조회
     path(
         "event/<int:event_id>/recommended-products/",
         RecommendedProductListView.as_view(),
         name="recommended-products_list",
     ),
-    
     #  특정 추천 상품 삭제
     path(
         "recommended-product/<int:product_id>/",
@@ -60,7 +56,6 @@ urlpatterns = [
         DateMemoDetailView.as_view(),
         name="date-memo_read_update_delete",
     ),
-    
     # 5. 빠른 선물 추천
     path(
         "quick/recommend/",

@@ -56,23 +56,21 @@ export default function RecommendResultScreen() {
     },
     onSuccess: () => {
       refetchHistory();
-      Alert.alert("추천 완료 🎁", "AI가 최적의 선물들을 새롭게 골라왔어요!");
+      Alert.alert("Success! 🎁", "AI has picked the perfect gifts!");
     },
     onError: (error: any) => {
       console.error(
-        "AI 추천 수행 실패:",
+        "AI Recommendation Failed:",
         error.response?.data || error.message,
       );
-      Alert.alert("분석 실패 🥲", "AI 엔진과의 연동에 실패했습니다.");
+      Alert.alert("Error 🥲", "Failed to connect with the AI engine.");
     },
   });
 
   // 💡 매직 디테일: 페이지 진입 시 데이터 여부를 완벽히 판별하여 최초 AI 가동 및 방어
   useEffect(() => {
-    // 서버로부터 기존 추천 내역을 조회하는 중이라면 가드
     if (isQueryLoading) return;
 
-    // 조회가 끝났는데도 추천된 상품이 0개인 완전 새 이벤트일 때만 AI 가동
     if (eventId && savedRecommendations.length === 0) {
       recommendMutation.mutate();
     }
@@ -84,10 +82,10 @@ export default function RecommendResultScreen() {
     if (supported) await Linking.openURL(url);
   };
 
-  const formatPrice = (price: number) => price.toLocaleString("en-US") + "USD";
+  // 💰 미국 현지 느낌에 맞는 달러($) 포맷팅 적용
+  const formatPrice = (price: number) => `$${price.toLocaleString("en-US")}`;
   const displayItems = recommendMutation.data || savedRecommendations;
 
-  // ⏳ 기존 추천 내역 초동 로딩 처리
   if (isQueryLoading && displayItems.length === 0) {
     return (
       <SafeAreaView
@@ -114,14 +112,14 @@ export default function RecommendResultScreen() {
         >
           <ArrowLeft size={22} color="#FF7096" strokeWidth={3} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Recommend</Text>
+        <Text style={styles.headerTitle}>AI Recommendations</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ✨ 2. AI 분석 작동 제어 보드 (원래의 화이트 클라우드 카드 테마) */}
+        {/* ✨ 2. AI 분석 작동 제어 보드 */}
         <View style={styles.cloudCard}>
           <View style={styles.bubbleTag}>
             <CheckCircle
@@ -129,20 +127,20 @@ export default function RecommendResultScreen() {
               color={"#FF7096"}
               style={{ marginRight: 5, marginTop: 3 }}
             />
-            <Text style={styles.bubbleTagText}>AI pick Best Gift</Text>
+            <Text style={styles.bubbleTagText}>AI pick</Text>
           </View>
           <Text style={styles.mainCardTitle}>
             {recommendMutation.isPending
-              ? "선물을 고르는 중... 🤖"
-              : "선물 추천 완료! 🥳"}
+              ? "Finding Gifts... 🤖"
+              : "Best Gifts Picked! 🥳"}
           </Text>
           <Text style={styles.mainCardSub}>
             {recommendMutation.isPending
-              ? "상대가 좋아할 만한 선물을 고르고 있어요. \n 잠시만 기다려주세요. "
-              : `지인 정보와 예산 범위를 반영해 \n 최고의 선물을 골라왔어요.`}
+              ? "AI is finding the best gifts that\nyour people will absolutely love."
+              : "AI has picked the best gifts\nbased on the budget and preferences!"}
           </Text>
 
-          {/* 다시 추천받기 버튼 테마 일치화 */}
+          {/* 다시 추천받기 버튼 */}
           {!recommendMutation.isPending && (
             <TouchableOpacity
               style={styles.cuteButton}
@@ -151,8 +149,7 @@ export default function RecommendResultScreen() {
                 recommendMutation.mutate();
               }}
             >
-              <Text style={styles.cuteButtonText}>선물 다시 추천받기</Text>
-              {/* <RefreshCw size={16} color="#FFF" style={{ marginLeft: 6 }} /> */}
+              <Text style={styles.cuteButtonText}>Get New Recommendations</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -169,7 +166,7 @@ export default function RecommendResultScreen() {
                 marginTop: Platform.OS === "ios" ? 10.5 : 12,
               }}
             />
-            <Text style={styles.sectionTitle}>AI가 픽한 선물 리스트</Text>
+            <Text style={styles.sectionTitle}>AI Top3 Picks</Text>
           </View>
 
           {recommendMutation.isPending ? (
@@ -205,7 +202,7 @@ export default function RecommendResultScreen() {
                 <View style={styles.cardDivider} />
 
                 <View style={styles.reasonContainer}>
-                  <Text style={styles.reasonLabel}>🤖 추천 이유</Text>
+                  <Text style={styles.reasonLabel}>🤖 WHY AI RECOMMEND</Text>
                   <Text style={styles.reasonText}>
                     {item.recommendation_reason}
                   </Text>
@@ -215,15 +212,15 @@ export default function RecommendResultScreen() {
                   style={styles.linkButton}
                   onPress={() => {
                     handleOpenLink(item.product_url);
-                    console.log("쿠팡 구매 URL:", item.product_url);
+                    console.log("Amazon Purchase URL:", item.product_url);
                   }}
                 >
-                  <Text style={styles.linkButtonText}>🎁 선물 구매하기</Text>
+                  <Text style={styles.linkButtonText}>🎁 Buy on Amazon</Text>
                 </TouchableOpacity>
-                {/* 🌟 [추가] 쿠팡 파트너스 공정위 문구 배치 */}
-                <Text style={styles.coupangNotice} numberOfLines={1}>
-                  ※ 쿠팡파트너스 활동의 일환으로 구매 시 소정의 수수료를
-                  제공받습니다.
+
+                {/* 🌟 [수정] 아마존 어소시에이트 공식 공시 문구로 변경 */}
+                <Text style={styles.amazonNotice} numberOfLines={1}>
+                  As an Amazon Associate, I earn from qualifying purchases.
                 </Text>
               </View>
             ))
@@ -231,7 +228,7 @@ export default function RecommendResultScreen() {
             <View style={styles.emptyContainer}>
               <ShoppingBag size={32} color="#E5E5EA" />
               <Text style={styles.emptyContainerText}>
-                아직 추천 내역이 없어요.{"\n"}새로운 이벤트를 등록해 보세요!
+                No recommendations yet.{"\n"}Try creating a new event!
               </Text>
             </View>
           )}
@@ -379,10 +376,11 @@ const styles = StyleSheet.create({
     borderColor: "#FFF0F3",
   },
   reasonLabel: {
-    fontSize: 12,
+    fontSize: 10, // 영문 대문자 간격 고려해 아주 세련되게 축소
     fontWeight: "800",
     color: "#FF7096",
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   reasonText: {
     fontSize: Platform.OS === "ios" ? 13 : 12,
@@ -396,9 +394,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 14,
     paddingVertical: 12,
-
     backgroundColor: "#FF7096",
-
     borderRadius: 16,
   },
   linkButtonText: { fontSize: 14, fontWeight: "800", color: "white" },
@@ -432,12 +428,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
-  coupangNotice: {
-    fontSize: Platform.OS === "ios" ? 9 : 8, // 버튼 밑에 들어가는 각주(Footnote) 느낌이 나도록 살짝 더 작게
-    color: "#868e96", // 은은한 회색조
-    textAlign: "center", // 가운데 정렬
-    marginTop: 8, // 구매하기 버튼과의 간격 (너무 떨어지지 않게 슬쩍 붙여줌)
-    marginBottom: 4, // 상품 카드 맨 밑 테두리와의 여백
+  // 💡 스타일 이름도 amazonNotice로 깔끔하게 정비
+  amazonNotice: {
+    fontSize: Platform.OS === "ios" ? 9 : 8,
+    color: "#868e96",
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 4,
     lineHeight: 14,
     letterSpacing: -0.2,
   },

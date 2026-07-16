@@ -16,10 +16,10 @@ class SignUpSerializer(serializers.ModelSerializer):
         validators=[
             UniqueValidator(
                 queryset=User.objects.all(),
-                message="이미 가입된 이메일입니다.",
+                message="This email is already registered.",
             )
         ],
-        error_messages={"invalid": "올바른 이메일 형식이 아닙니다"},
+        error_messages={"invalid": "Please enter a valid email address."},
     )
     password_confirm = serializers.CharField(write_only=True)
 
@@ -37,13 +37,13 @@ class SignUpSerializer(serializers.ModelSerializer):
         if not re.match(password_regex, password):
             raise serializers.ValidationError(
                 {
-                    "password": "비밀번호는 영문과 숫자를 포함하여 8자리 이상이어야 합니다."
+                    "password": "Password must be at least 8 characters and include letters and numbers."
                 }
             )
 
         if password != password_confirm:
             raise serializers.ValidationError(
-                {"password_confirm": "비밀번호가 서로 일치하지 않습니다."}
+                {"password_confirm": "Passwords do not match."}
             )
 
         return data

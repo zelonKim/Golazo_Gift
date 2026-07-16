@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-// import * as WebBrowser from "expo-web-browser";
 import { ArrowLeft, BookmarkCheck } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -44,13 +43,13 @@ export default function RecommendResultScreen() {
           setIsReady(true);
         } else {
           Alert.alert(
-            "알림",
-            "추천 결과가 없습니다. 정보를 다시 입력해 주세요 🥲",
-            [{ text: "확인", onPress: () => router.replace("/recommend") }],
+            "Notice",
+            "No recommendation results found. Please enter your details again. 🥲",
+            [{ text: "OK", onPress: () => router.replace("/recommend") }],
           );
         }
       } catch (error) {
-        console.error("데이터 로드 실패:", error);
+        console.error("Failed to load data:", error);
         router.replace("/recommend");
       }
     };
@@ -64,22 +63,10 @@ export default function RecommendResultScreen() {
     if (supported) await Linking.openURL(url);
   };
 
-  // 외부 링크 이동 핸들러 (Expo WebBrowser 활용)
-  // const handleOpenLink = async (url: string) => {
-  //   if (!url) return;
-  //   try {
-  //     await WebBrowser.openBrowserAsync(url);
-
-  //   } catch (error) {
-  //     console.error("링크 열기 실패:", error);
-  //     Alert.alert("오류", "링크를 열 수 없습니다.");
-  //   }
-  // };
-
   if (!isReady) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>결과 화면을 불러오는 중입니다...</Text>
+        <Text style={styles.loadingText}>Loading your results...</Text>
       </View>
     );
   }
@@ -95,7 +82,7 @@ export default function RecommendResultScreen() {
           <ArrowLeft size={24} color="#334155" />
         </TouchableOpacity>
 
-        <Text style={styles.badgeText}>🎉 추천 완료</Text>
+        <Text style={styles.badgeText}>🎉 Recommended</Text>
 
         <View style={{ width: 24 }} />
       </View>
@@ -107,10 +94,11 @@ export default function RecommendResultScreen() {
         {/* 상단 타이틀 */}
         <View style={styles.welcomeSection}>
           <Text style={styles.mainTitle}>
-            🤖 AI가 픽한 <Text style={styles.highlightText}>맞춤 선물</Text>
+            🤖 AI's <Text style={styles.highlightText}>Top Picks</Text>
           </Text>
           <Text style={styles.subTitle}>
-            입력된 정보를 바탕으로 분석한 {"\n"}맞춤 선물 리스트입니다.
+            Here are the perfect gifts analyzed{"\n"}based on the details you
+            provided.
           </Text>
         </View>
 
@@ -128,7 +116,7 @@ export default function RecommendResultScreen() {
                   />
                 ) : (
                   <View style={styles.imagePlaceholder}>
-                    <Text style={styles.placeholderEmoji}>🎁</Text>
+                    <Text style={styles.placeholderEmoji}>🛍️</Text>
                   </View>
                 )}
                 <View style={styles.productInfo}>
@@ -137,15 +125,15 @@ export default function RecommendResultScreen() {
                   </Text>
                   <Text style={styles.productPrice}>
                     {item.product_price === 0
-                      ? "변동"
-                      : `${item.product_price.toLocaleString()}원`}
+                      ? "Price Varies"
+                      : `$${item.product_price.toLocaleString("en-US")}`}
                   </Text>
                 </View>
               </View>
 
               {/* AI 추천 이유 */}
               <View style={styles.reasonBox}>
-                <Text style={styles.reasonTitle}>🤖 추천 이유</Text>
+                <Text style={styles.reasonTitle}>🤖 WHY AI RECOMMENDS</Text>
                 <Text style={styles.reasonText}>
                   {item.recommendation_reason}
                 </Text>
@@ -156,14 +144,13 @@ export default function RecommendResultScreen() {
                 style={styles.buyButton}
                 onPress={() => handleOpenLink(item.product_url)}
               >
-                <Text style={styles.buyButtonText}>
-                  🎁 선물 구매하러 가기 ➔
-                </Text>
+                <Text style={styles.buyButtonText}>🎁 Buy on Amazon ➔</Text>
               </TouchableOpacity>
 
+              {/* 공식 어소시에이트 공시 구문 반영 */}
               <Text style={styles.partnersText}>
-                ※ 쿠팡 파트너스 활동의 일환으로 구매 시 소정의 수수료를
-                제공받습니다.
+                As an Amazon Associate, we earn a small commission from
+                qualifying purchases at no extra cost to you.
               </Text>
             </View>
           ))}
@@ -174,7 +161,10 @@ export default function RecommendResultScreen() {
           activeOpacity={0.7}
           onPress={() => {
             router.replace("/login");
-            Alert.alert("안내", "로그인한 회원만 추천 결과 저장이 가능합니다.");
+            Alert.alert(
+              "Account Required",
+              "Sign up to save your gift recommendation history!",
+            );
           }}
         >
           <BookmarkCheck
@@ -182,7 +172,7 @@ export default function RecommendResultScreen() {
             size={20}
             style={{ marginRight: 6 }}
           />
-          <Text style={styles.saveSoftButtonText}>추천 결과 저장하기</Text>
+          <Text style={styles.saveSoftButtonText}>Save These Gift Picks</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -271,7 +261,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#0F172A",
-    // leadingHegiht: 20,
   },
   productPrice: {
     fontSize: 17,
@@ -288,10 +277,11 @@ const styles = StyleSheet.create({
     borderColor: "#F1F5F9",
   },
   reasonTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#334155",
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FF7096",
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   reasonText: {
     fontSize: Platform.OS === "ios" ? 12.5 : 11.5,
@@ -324,7 +314,6 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === "ios" ? 15 : 14,
     color: "#FF7096",
     fontWeight: Platform.OS === "ios" ? "700" : "600",
-    // textDecorationLine: "underline",
     borderBottomWidth: 1.2,
     borderBottomColor: "#FF7096",
   },
@@ -333,16 +322,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFF0F3", // 부드러운 밀크 핑크 배경
+    backgroundColor: "#FFF0F3",
     borderWidth: 1.5,
-    borderColor: "#FFE3EB", // 은은한 테두리 가드
+    borderColor: "#FFE3EB",
     paddingVertical: 15,
     borderRadius: 20,
     width: "100%",
     marginTop: 20,
   },
   saveSoftButtonText: {
-    color: "#FF7096", // 텍스트 컬러 포인팅
+    color: "#FF7096",
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: -0.3,

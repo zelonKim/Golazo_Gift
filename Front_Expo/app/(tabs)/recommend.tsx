@@ -23,17 +23,27 @@ interface Recipient {
   name: string;
 }
 
+// 🎁 백엔드 PURPOSE_CHOICES 수정 사항 완벽 매핑
 const PURPOSE_LIST = [
-  { code: "FRIEND_BDAY", label: "🎂 친구 생일" },
-  { code: "LOVER_BDAY", label: "❤️ 애인 생일" },
-  { code: "PARENTS_BDAY", label: "💐 부모님 생신" },
-  { code: "COUPLE_ANNIV", label: "👩‍❤️‍👨 커플 기념일" },
-  { code: "WED_ANNIV", label: "💍 결혼 기념일" },
-  { code: "GRADUATE", label: "🎓 졸업" },
-  { code: "EMPLOY", label: "💼 취업" },
-  { code: "HOUSE", label: "🏠 집들이" },
-  { code: "BIRTH", label: "👶 출산" },
-  { code: "SELF_GIFT", label: "🎁 나에게 선물" },
+  { code: "FRIEND_BDAY", label: "🎂 Friend's BDay" }, // 15자
+  { code: "LOVER_BDAY", label: "❤️ Partner's BDay" }, // 16자
+  { code: "PARENTS_BDAY", label: "💐 Parents' BDay" }, // 16자
+  { code: "COUPLE_ANNIV", label: "👩‍❤️‍👨 Couple Anniv" }, // 9자 (미국은 기념일을 보통 그냥 Anniv로 소통해요!)
+  { code: "WED_ANNIV", label: "💍 Wedding Anniv" }, // 15자
+  { code: "GRADUATE", label: "🎓 Graduation" }, // 12자
+  { code: "EMPLOY", label: "💼 New Job" }, // 9자 (Promotion은 빼고 가장 흔한 New Job으로 압축!)
+  { code: "HOUSEWARMING", label: "🏠 Housewarming" }, // 14자
+  { code: "WEDDING", label: "🔔 Wedding" }, // 9자
+  { code: "BRIDAL_SHOWER", label: "👰 Bridal Shower" }, // 15자
+  { code: "BABY_SHOWER", label: "🍼 Baby Shower" }, // 13자
+  { code: "BIRTH", label: "👶 New Baby" }, // 10자
+  { code: "CHRISTMAS", label: "🎄 Christmas" }, // 11자 (Holidays를 떼어내고 핵심만 남김)
+  { code: "VALENTINE", label: "💝 Valentine's" }, // 13자 (뒤의 Day를 생략해도 100% 알아듣습니다)
+  { code: "MOTHERS_DAY", label: "👩 Mother's Day" }, // 14자
+  { code: "FATHERS_DAY", label: "👨 Father's Day" }, // 14자
+  { code: "THANK_YOU", label: "🙏 Thank You" }, // 11자 (Appreciation을 빼고 대중적인 인사말로 압축!)
+  { code: "GET_WELL", label: "🩹 Get Well" }, // 10자 (Soon을 빼고 깔끔하게 표현)
+  { code: "SELF_GIFT", label: "🎁 For Me" }, // 8자 (Treat Yourself보다 훨씬 짧고 직관적!)
 ];
 
 export default function RecommendScreen() {
@@ -63,7 +73,7 @@ export default function RecommendScreen() {
       min_budget: number;
       max_budget: number;
     }) => {
-      if (!selectedRecipientId) throw new Error("지인을 선택해야 합니다.");
+      if (!selectedRecipientId) throw new Error("Please select a recipient.");
       const response = await client.post(
         `gift/recipient/${selectedRecipientId}/event/`,
         newEventData,
@@ -75,7 +85,7 @@ export default function RecommendScreen() {
         data.event_id || data.id || (data.event && data.event.id);
 
       if (!serverEventId) {
-        Alert.alert("오류 😢", "이벤트 생성 실패");
+        Alert.alert("Error 😢", "Failed to create event.");
         return;
       }
 
@@ -93,33 +103,36 @@ export default function RecommendScreen() {
     },
     onError: (error: any) => {
       console.error("이벤트 등록 실패:", error.response?.data);
-      Alert.alert("등록 실패 🥲", "입력 내용을 다시 한번 확인해 주세요.");
+      Alert.alert("Failed", "Please check your information and try again.");
     },
   });
 
   const handleCreateEvent = () => {
     if (!selectedRecipientId) {
-      Alert.alert("알림", "선물 상대방을 선택해 주세요.");
+      Alert.alert("Required", "Please select a recipient.");
       return;
     }
 
     if (!eventPurpose) {
-      Alert.alert("알림", "선물 목적을 선택해 주세요.");
+      Alert.alert("Required", "Please select the occasion.");
       return;
     }
 
     if (!minBudget) {
-      Alert.alert("알림", "최소 예산을 입력해 주세요.");
+      Alert.alert("Required", "Please set a minimum budget.");
       return;
     }
 
     if (!maxBudget) {
-      Alert.alert("알림", "최대 예산을 입력해 주세요.");
+      Alert.alert("Required", "Please set a maximum budget.");
       return;
     }
 
-    if (minBudget > maxBudget) {
-      Alert.alert("알림", "최소 예산은 최대 예산보다 클 수 없습니다.");
+    if (Number(minBudget) > Number(maxBudget)) {
+      Alert.alert(
+        "Check Budget",
+        "Minimum budget cannot exceed maximum budget.",
+      );
       return;
     }
     createEventMutation.mutate({
@@ -136,13 +149,13 @@ export default function RecommendScreen() {
     return num ? Number(value).toLocaleString() : "";
   };
 
-  // 2. 입력된 문자열에서 쉼표를 제거하고 최대 10,000,000 제한을 걸어 숫자로 변환 (State 저장용)
+  // 2. 입력된 문자열에서 쉼표를 제거하고 최대 $10,000 제한을 걸어 숫자로 변환 (State 저장용)
   const toRawNumber = (text: string) => {
     const cleanNumber = text.replace(/[^0-9]/g, ""); // 쉼표 및 문자 제거
     if (!cleanNumber) return 0;
 
     const num = Number(cleanNumber);
-    return num > 10000000 ? 10000000 : num; // 최대 1,000만 원까지만 허용
+    return num > 10000 ? 10000 : num; // 미국 시장에 알맞게 최대 $10,000 한도로 조정
   };
 
   return (
@@ -151,170 +164,165 @@ export default function RecommendScreen() {
       edges={["top"]}
     >
       <View style={styles.header}>
-        <Text style={styles.logoText}>AI Recommend</Text>
+        <Text style={styles.logoText}>AI Recommendations</Text>
       </View>
-{/* 
+      {/* 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
         // 안드로이드는 네이티브 윈도우 조절을 타므로 iOS만 살짝 패딩 보정해주면 부드럽습니다.
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       > */}
-        {/* 🚨 [정석 서순 2] 허공 터치 시 키보드 dismiss 레이어를 스크롤뷰 위에 얹어줍니다. */}
+      {/* 🚨 [정석 서순 2] 허공 터치 시 키보드 dismiss 레이어를 스크롤뷰 위에 얹어줍니다. */}
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled" // 💡 배지나 버튼 누를 때 키보드 때문에 터치가 한 번 씹히는 걸 방지해줍니다!
-        >
-          <View style={styles.formContainer}>
-            <Text style={styles.mainTitle}>누구를 위한 선물인가요? 🎁</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled" // 💡 배지나 버튼 누를 때 키보드 때문에 터치가 한 번 씹히는 걸 방지해줍니다!
+      >
+        <View style={styles.formContainer}>
+          <Text style={styles.mainTitle}>Who is this gift for? 🎁</Text>
 
-            <Text style={styles.mainSub}>
-              선물 대상과 이벤트를 등록하고 AI에게 {"\n"}최적의 선물을 추천
-              받아보세요.
-            </Text>
+          <Text style={styles.mainSub}>
+            Select a recipient and occasion to get the {"\n"}perfect gift ideas
+            recommended by AI.
+          </Text>
 
-            {/* 👥 인풋 1: 선물 대상 선택 */}
-            <Text style={styles.inputLabel}>선물 대상 선택</Text>
-            {/* 지인 가로 스크롤 영역 */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.recipientSelector}
-              keyboardShouldPersistTaps="handled" // 👈 여기도 추가하면 지인 배지 누를 때 키보드가 바로 안 내려가고 찰떡같이 선택됩니다.
+          {/* 👥 인풋 1: 선물 대상 선택 */}
+          <Text style={styles.inputLabel}>Select Recipient</Text>
+          {/* 지인 가로 스크롤 영역 */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.recipientSelector}
+            keyboardShouldPersistTaps="handled" // 👈 여기도 추가하면 지인 배지 누를 때 키보드가 바로 안 내려가고 찰떡같이 선택됩니다.
+          >
+            <TouchableOpacity
+              style={[
+                styles.recipientBadge,
+                {
+                  backgroundColor: "#FFF0F3",
+                  borderColor: "#FF7096",
+                  borderStyle: "dashed",
+                },
+              ]}
+              onPress={() => router.push("/(tabs)/recipient")}
             >
+              <UserPlus size={13} color="#FF7096" style={{ marginRight: 4 }} />
+              <Text
+                style={[
+                  styles.recipientBadgeText,
+                  { fontWeight: Platform.OS === "ios" ? "800" : "900" },
+                ]}
+              >
+                Add People +
+              </Text>
+            </TouchableOpacity>
+
+            {recipients.map((r) => (
               <TouchableOpacity
+                key={r.id}
                 style={[
                   styles.recipientBadge,
-                  {
-                    backgroundColor: "#FFF0F3",
-                    borderColor: "#FF7096",
-                    borderStyle: "dashed",
-                  },
+                  selectedRecipientId === r.id && styles.recipientBadgeSelected,
                 ]}
-                onPress={() => router.push("/(tabs)/recipient")}
+                onPress={() => setSelectedRecipientId(r.id)}
               >
-                <UserPlus
-                  size={13}
-                  color="#FF7096"
+                <User
+                  size={12}
+                  color={selectedRecipientId === r.id ? "white" : "#FF7096"}
                   style={{ marginRight: 4 }}
                 />
                 <Text
                   style={[
                     styles.recipientBadgeText,
-                    { fontWeight: Platform.OS === "ios" ? "900" : "800" },
+                    selectedRecipientId === r.id && { color: "white" },
                   ]}
                 >
-                  지인 추가 +
+                  {r.name}
                 </Text>
               </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-              {recipients.map((r) => (
+          {/* 🎁 인풋 2: 선물 목적 */}
+          <Text style={styles.inputLabel}>Occasion</Text>
+          <View style={styles.gridContainer}>
+            {PURPOSE_LIST.map((item) => {
+              const isSelected = eventPurpose === item.code;
+              return (
                 <TouchableOpacity
-                  key={r.id}
+                  key={item.code}
                   style={[
-                    styles.recipientBadge,
-                    selectedRecipientId === r.id &&
-                      styles.recipientBadgeSelected,
+                    styles.purposeGridBadge,
+                    isSelected && styles.choiceBadgeSelected,
                   ]}
-                  onPress={() => setSelectedRecipientId(r.id)}
+                  onPress={() => setEventPurpose(item.code)}
                 >
-                  <User
-                    size={12}
-                    color={selectedRecipientId === r.id ? "white" : "#FF7096"}
-                    style={{ marginRight: 4 }}
-                  />
                   <Text
                     style={[
-                      styles.recipientBadgeText,
-                      selectedRecipientId === r.id && { color: "white" },
+                      styles.purposeGridBadgeText,
+                      isSelected && { color: "white" },
                     ]}
                   >
-                    {r.name}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              );
+            })}
+          </View>
 
-            {/* 🎁 인풋 2: 선물 목적 */}
-            <Text style={styles.inputLabel}>선물 목적</Text>
-            <View style={styles.gridContainer}>
-              {PURPOSE_LIST.map((item) => {
-                const isSelected = eventPurpose === item.code;
-                return (
-                  <TouchableOpacity
-                    key={item.code}
-                    style={[
-                      styles.purposeGridBadge,
-                      isSelected && styles.choiceBadgeSelected,
-                    ]}
-                    onPress={() => setEventPurpose(item.code)}
-                  >
-                    <Text
-                      style={[
-                        styles.purposeGridBadgeText,
-                        isSelected && { color: "white" },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* 💰 인풋 3: 예산 범위 설정 */}
-            <Text style={styles.inputLabel}>예산 범위 설정 (원 단위)</Text>
+          {/* 💰 인풋 3: 예산 범위 설정 */}
+          <Text style={styles.inputLabel}>Budget Range ($)</Text>
+          <View style={styles.budgetRow}>
             <View style={styles.budgetRow}>
-              <View style={styles.budgetRow}>
-                <View style={[styles.inputWrapper, { flex: 1 }]}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="최소 예산"
-                    placeholderTextColor="#AEAEB2"
-                    keyboardType="number-pad" // 숫자 키패드만 나오도록 변경(iOS/안드로이드 공통 권장)
-                    value={toDisplayValue(minBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
-                    onChangeText={(text) => setMinBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
-                  />
-                </View>
+              <View style={[styles.inputWrapper, { flex: 1 }]}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Min budget"
+                  placeholderTextColor="#AEAEB2"
+                  keyboardType="number-pad" // 숫자 키패드만 나오도록 변경(iOS/안드로이드 공통 권장)
+                  value={toDisplayValue(minBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
+                  onChangeText={(text) => setMinBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
+                />
+              </View>
 
-                <Text style={styles.budgetBetween}>~</Text>
+              <Text style={styles.budgetBetween}>-</Text>
 
-                <View style={[styles.inputWrapper, { flex: 1 }]}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="최대 예산"
-                    placeholderTextColor="#AEAEB2"
-                    keyboardType="number-pad"
-                    value={toDisplayValue(maxBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
-                    onChangeText={(text) => setMaxBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
-                  />
-                </View>
+              <View style={[styles.inputWrapper, { flex: 1 }]}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Max budget"
+                  placeholderTextColor="#AEAEB2"
+                  keyboardType="number-pad"
+                  value={toDisplayValue(maxBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
+                  onChangeText={(text) => setMaxBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
+                />
               </View>
             </View>
-
-            {/* 🤖 추천받기 제출 버튼 */}
-            <TouchableOpacity
-              style={[
-                styles.modalSubmitButton,
-                createEventMutation.isPending && styles.disabledButton,
-              ]}
-              onPress={handleCreateEvent}
-              disabled={createEventMutation.isPending}
-            >
-              {createEventMutation.isPending ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <>
-                  <Text style={styles.modalSubmitButtonText}>
-                    선물 추천받기
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
           </View>
-        </ScrollView>
+
+          {/* 🤖 추천받기 제출 버튼 */}
+          <TouchableOpacity
+            style={[
+              styles.modalSubmitButton,
+              createEventMutation.isPending && styles.disabledButton,
+            ]}
+            onPress={handleCreateEvent}
+            disabled={createEventMutation.isPending}
+          >
+            {createEventMutation.isPending ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <>
+                <Text style={styles.modalSubmitButtonText}>
+                  Get AI Recommendations
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
       {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );

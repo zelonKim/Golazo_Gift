@@ -21,6 +21,7 @@ from datetime import date
 from .models import DateMemo
 
 
+
 class RecipientView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -213,7 +214,7 @@ class EventDetailView(APIView):
 ##################################################################
 
 
-# Django View 파일 수정 예시
+
 class GiftRecommendView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -250,6 +251,8 @@ class GiftRecommendView(APIView):
 
             recommendations = response.json()
             response_data = []
+
+
 
             for prod in recommendations:
                 product_name = prod.get("product_name")
@@ -536,7 +539,6 @@ class GiftQuickRecommendView(APIView):
             for prod in recommendations:
                 product_name = prod.get("product_name")
 
-                # 💡 기존 get_coupang_product를 get_amazon_product로 전면 교체
                 amazon_info = get_amazon_product(
                     search_keyword=product_name,
                     min_budget=min_budget,

@@ -31,7 +31,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -70,11 +69,11 @@ export default function MyPageScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      Alert.alert("변경 완료", "새로운 닉네임이 프로필에 반영되었습니다.");
+      Alert.alert("Success ", "Your nickname has been updated successfully.");
       setIsEditModalVisible(false);
     },
     onError: () => {
-      Alert.alert("오류", "닉네임 수정에 실패했습니다.");
+      Alert.alert("Error 🥲", "Failed to update nickname.");
     },
   });
 
@@ -86,13 +85,13 @@ export default function MyPageScreen() {
     onSuccess: async () => {
       await SecureStore.deleteItemAsync("userToken");
       Alert.alert(
-        "탈퇴 완료",
-        "그동안 서비스를 이용해 주셔서 진심으로 감사드립니다.",
+        "Account Deleted",
+        "We're sad to see you go. Thank you for using our service.",
       );
       router.replace("/login");
     },
     onError: () => {
-      Alert.alert("오류 😢", "탈퇴 처리에 실패했습니다. 다시 시도해 주세요.");
+      Alert.alert("Error 🥲", "Failed to delete account. Please try again.");
     },
   });
 
@@ -104,17 +103,17 @@ export default function MyPageScreen() {
 
   const handleSaveNickname = () => {
     if (!inputNickname.trim()) {
-      Alert.alert("알림", "원하시는 닉네임을 적어주세요!");
+      Alert.alert("Notice", "Please enter your nickname!");
       return;
     }
     updateNicknameMutation.mutate(inputNickname.trim());
   };
 
   const handleLogOut = () => {
-    Alert.alert("로그아웃", "정말 로그아웃 하시겠어요?", [
-      { text: "아니오", style: "cancel" },
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "네",
+        text: "Log Out",
         style: "destructive",
         onPress: async () => {
           await SecureStore.deleteItemAsync("userToken");
@@ -127,12 +126,12 @@ export default function MyPageScreen() {
   // ⚠️ 회원 탈퇴 컨펌 얼럿 핸들러
   const handleDeleteAccountCheck = () => {
     Alert.alert(
-      "⚠️ 회원 탈퇴 ",
-      "정말 계정을 삭제하시겠어요?\n\n등록하신 지인 정보와 선물 추천 내역도 모두 삭제되며 이는 복구할 수 없습니다.",
+      "⚠️ Delete Account",
+      "Are you sure you want to delete your account?\n\nAll registered friends and gift recommendation history will be permanently deleted and cannot be restored.",
       [
-        { text: "취소", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         {
-          text: "탈퇴할래요",
+          text: "Delete",
           style: "destructive",
           onPress: () => deleteAccountMutation.mutate(),
         },
@@ -155,7 +154,7 @@ export default function MyPageScreen() {
   }
 
   // 표시 명칭 분기 가이드라인 반영
-  const displayNickname = profile?.nickname || "닉네임을 설정해주세요";
+  const displayNickname = profile?.nickname || "Set your nickname";
 
   return (
     <SafeAreaView
@@ -186,7 +185,7 @@ export default function MyPageScreen() {
               <View style={styles.badgeRow}>
                 <View style={styles.bubbleTag}>
                   <Text style={styles.bubbleTagText} numberOfLines={1}>
-                    반가워요 👋
+                    Welcome 👋
                   </Text>
                 </View>
               </View>
@@ -216,14 +215,18 @@ export default function MyPageScreen() {
                 fill="#FF7096"
                 style={{ marginBottom: 4 }}
               />
-              <Text style={styles.statNumber}>{totalRecipients}명</Text>
-              <Text style={styles.statLabel}>소중한 사람들</Text>
+              <Text style={styles.statNumber}>
+                {totalRecipients} {totalRecipients === 1 ? "person" : "people"}
+              </Text>
+              <Text style={styles.statLabel}>Loved Ones</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Gift size={16} color="#FFB800" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumber}>{totalEvents}개</Text>
-              <Text style={styles.statLabel}>챙긴 기념일</Text>
+              <Text style={styles.statNumber}>
+                {totalEvents} {totalEvents === 1 ? "event" : "events"}
+              </Text>
+              <Text style={styles.statLabel}>Events Saved</Text>
             </View>
           </View>
         </View>
@@ -232,7 +235,7 @@ export default function MyPageScreen() {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Settings size={22} color={"#FF7096"} />
-            <Text style={styles.sectionTitle}>서비스 설정</Text>
+            <Text style={styles.sectionTitle}>Settings</Text>
           </View>
 
           {/* 닉네임 변경 터치 시 모달 온 */}
@@ -242,9 +245,9 @@ export default function MyPageScreen() {
                 <User size={16} color="#FF7096" />
               </View>
               <View>
-                <Text style={styles.listItemName}>닉네임 설정 및 변경</Text>
+                <Text style={styles.listItemName}>Set & Edit Nickname</Text>
                 <Text style={styles.listItemSubText}>
-                  앱에서 사용할 이름 수정하기
+                  Update the name shown in the app
                 </Text>
               </View>
             </View>
@@ -257,9 +260,9 @@ export default function MyPageScreen() {
                 <LogOut size={16} color="#FF7096" />
               </View>
               <View>
-                <Text style={styles.listItemName}>로그아웃</Text>
+                <Text style={styles.listItemName}>Log Out</Text>
                 <Text style={styles.listItemSubText}>
-                  현재 기기에서 계정 나가기
+                  Sign out of your account on this device
                 </Text>
               </View>
             </View>
@@ -275,9 +278,9 @@ export default function MyPageScreen() {
                   <Info size={16} color="#FF7096" />
                 </View>
                 <View>
-                  <Text style={styles.listItemName}>개인정보 처리방침</Text>
+                  <Text style={styles.listItemName}>Privacy Policy</Text>
                   <Text style={styles.listItemSubText}>
-                    앱에서 수집된 정보 알아보기
+                    Read about how we protect your info
                   </Text>
                 </View>
               </View>
@@ -297,10 +300,10 @@ export default function MyPageScreen() {
               </View>
               <View>
                 <Text style={[styles.listItemName, { color: "#FF4D4D" }]}>
-                  회원 탈퇴
+                  Delete Account
                 </Text>
                 <Text style={styles.listItemSubText}>
-                  계정 및 연관 데이터 영구 삭제
+                  Permanently delete account
                 </Text>
               </View>
             </View>
@@ -315,51 +318,37 @@ export default function MyPageScreen() {
         visible={isEditModalVisible}
         onRequestClose={() => setIsEditModalVisible(false)}
       >
-        {/* <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          // 안드로이드는 네이티브 윈도우 조절을 타므로 iOS만 살짝 패딩 보정해주면 부드럽습니다.
-          keyboardVerticalOffset={Platform.OS === "ios" ? -150 : -120}
-        > */}
-          <TouchableWithoutFeedback
-            onPress={Keyboard.dismiss}
-            accessible={false}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>
-                    닉네임 설정 및 변경
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setIsEditModalVisible(false)}
-                  >
-                    <X size={20} color="#AEAEB2" />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.inputLabel}>새로운 닉네임</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="닉네임을 입력해 주세요"
-                    placeholderTextColor="#AEAEB2"
-                    value={inputNickname}
-                    onChangeText={setInputNickname}
-                    maxLength={15}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.modalSubmitButton}
-                  onPress={handleSaveNickname}
-                >
-                  <Text style={styles.modalSubmitButtonText}>저장하기</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalHeaderTitle}>Set & Edit Nickname</Text>
+                <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                  <X size={20} color="#AEAEB2" />
                 </TouchableOpacity>
               </View>
+
+              <Text style={styles.inputLabel}>New Nickname</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter your nickname"
+                  placeholderTextColor="#AEAEB2"
+                  value={inputNickname}
+                  onChangeText={setInputNickname}
+                  maxLength={15}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalSubmitButton}
+                onPress={handleSaveNickname}
+              >
+                <Text style={styles.modalSubmitButtonText}>Save Changes</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableWithoutFeedback>
-        {/* </KeyboardAvoidingView> */}
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

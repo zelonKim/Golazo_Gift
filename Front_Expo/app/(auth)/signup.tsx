@@ -31,12 +31,10 @@ interface SignupData {
 export default function SignUpScreen() {
   const router = useRouter();
 
-  // 📝 입력 필드 상태 관리
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
-  // 🚀 장고 SignUpView API 연동을 위한 useMutation 세팅
   const signupMutation = useMutation({
     mutationFn: async (signupData: SignupData) => {
       const response = await client.post("user/signup/", signupData);
@@ -48,75 +46,56 @@ export default function SignUpScreen() {
 
         if (accessToken) {
           await SecureStore.setItemAsync("userToken", accessToken);
-
-          Alert.alert(`회원가입이 완료되었습니다. 환영합니다! 🎉`);
-
+          // 팝업 메시지 현지화
+          Alert.alert("Welcome!", "Account created successfully! 🎉");
           router.replace("/(tabs)");
         } else {
-          throw new Error("서버로부터 발급된 토큰이 없습니다.");
+          throw new Error("No token returned from server.");
         }
       } catch (error) {
-        console.error("토큰 자동 로그인 처리 중 에러:", error);
-        Alert.alert("알림", "회원가입은 되었으나 자동 로그인에 실패했습니다.");
+        console.error("Token auto-login error:", error);
+        Alert.alert(
+          "Notice",
+          "Account created, but auto-login failed. Please log in manually.",
+        );
         router.replace("./login");
       }
     },
     onError: (error: any) => {
-      console.error("🔥 진짜 에러 실체:", error);
-      console.error("🔥 에러 메시지:", error.message);
-      console.error("회원가입 실패 원인:", error.response?.data);
       const serverData = error.response?.data;
-      let errorMsg = "입력 정보를 다시 확인해 주세요. 🥲";
+      let errorMsg = "Please check your information and try again. 🥲";
 
+      // ⚠️ 만약 Django 백엔드 에러 메시지가 한글로 온다면,
+      // 추후 글로벌용 글로벌 API 에러 핸들링 코드로 분기 처리를 해주셔야 합니다.
       if (serverData) {
-        if (
-          serverData.non_field_errors &&
-          Array.isArray(serverData.non_field_errors) &&
-          serverData.non_field_errors.length > 0
-        ) {
+        if (serverData.non_field_errors?.[0]) {
           errorMsg = serverData.non_field_errors[0];
-        }
-
-        // 2순위: 우리가 백엔드에서 에러 키를 직접 "error"로 커스텀해서 보낸 경우
-        else if (serverData.error) {
+        } else if (serverData.error) {
           errorMsg = serverData.error;
-        }
-
-        // 3순위: {"email": ["..."]} 이나 {"password": ["..."]} 처럼 특정 필드에 에러 배열이 꽂힌 경우
-        else if (typeof serverData === "object") {
-          const errorKeys = Object.keys(serverData);
-          if (errorKeys.length > 0) {
-            const firstKey = errorKeys[0];
-            const firstErrorArray = serverData[firstKey];
-
-            if (Array.isArray(firstErrorArray) && firstErrorArray.length > 0) {
-              errorMsg = firstErrorArray[0]; // 장고가 준 실제 한글 텍스트만 쏙!
-            } else if (typeof firstErrorArray === "string") {
-              errorMsg = firstErrorArray;
-            }
-          }
-        }
-
-        // 4순위: 예외적으로 텍스트 통문장으로 에러가 넘어온 경우
-        else if (typeof serverData === "string") {
+        } else if (typeof serverData === "object") {
+          const firstKey = Object.keys(serverData)[0];
+          const firstError = serverData[firstKey];
+          errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+        } else if (typeof serverData === "string") {
           errorMsg = serverData;
         }
       }
 
-      Alert.alert("가입 실패 ", errorMsg);
+      Alert.alert("Sign Up Failed", errorMsg);
     },
   });
 
   const handleSignUp = () => {
+    // 1. 빈 필드 검증
     if (!email || !password || !passwordConfirm) {
-      Alert.alert("알림", "모든 항목을 입력해주세요!");
+      Alert.alert("Required", "Please fill in all fields.");
       return;
     }
 
     // 2. 이메일 형식 검증
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("안내", "올바른 이메일 형식을 입력해 주세요.");
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
       return;
     }
 
@@ -124,15 +103,15 @@ export default function SignUpScreen() {
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       Alert.alert(
-        "안내",
-        "비밀번호는 영문과 숫자를 포함하여 8자리 이상이어야 해요!",
+        "Invalid Password",
+        "Password must be at least 8 characters long and include both letters and numbers.",
       );
       return;
     }
 
     // 4. 비밀번호 일치 검증
     if (password !== passwordConfirm) {
-      Alert.alert("안내", "비밀번호와 비밀번호 확인이 서로 일치하지 않아요.");
+      Alert.alert("Password Mismatch", "Passwords do not match.");
       return;
     }
 
@@ -145,21 +124,12 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
-      {/* <KeyboardAvoidingView
-        // 🌟 [수정 2] iOS는 padding, 안드로이드는 네이티브 매커니즘(height 또는 생략) 분기 슛!
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.select({
-          ios: 0, // 헤더나 탭바 높이에 맞춰 오프셋 보정
-          android: 10,
-        })}
-      > */}
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.content}>
-          {/* 🪄 1. 상단 인트로 타이틀 */}
+          {/* 🪄 1. 상단 인트로 타이틀 현지화 */}
           <View style={styles.welcomeSection}>
-            <Text style={styles.subTitle}>소중한 사람들을 위한 선물</Text>
-            <Text style={styles.mainTitle}>여기서 골라줘 🎁</Text>
+            <Text style={styles.subTitle}>Gifts for your loved ones,</Text>
+            <Text style={styles.mainTitle}>Made simple 🎁</Text>
           </View>
 
           {/* 폼 영역 */}
@@ -169,7 +139,7 @@ export default function SignUpScreen() {
               <Mail size={18} color="#FF7096" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="이메일 주소"
+                placeholder="Email"
                 placeholderTextColor="#AEAEB2"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -183,7 +153,7 @@ export default function SignUpScreen() {
               <Lock size={18} color="#FF7096" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="비밀번호 (영문 + 숫자 8자 이상)"
+                placeholder="Password (8+ chars, letters & numbers)"
                 placeholderTextColor="#AEAEB2"
                 secureTextEntry
                 autoCapitalize="none"
@@ -197,7 +167,7 @@ export default function SignUpScreen() {
               <Lock size={18} color="#FF7096" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="비밀번호 확인"
+                placeholder="Confirm password"
                 placeholderTextColor="#AEAEB2"
                 secureTextEntry
                 autoCapitalize="none"
@@ -207,7 +177,7 @@ export default function SignUpScreen() {
             </View>
           </View>
 
-          {/* 🚀 3. 회원가입 매직 버튼 */}
+          {/* 🚀 3. 회원가입 버튼 현지화 */}
           <TouchableOpacity
             style={[
               styles.cuteButton,
@@ -219,21 +189,19 @@ export default function SignUpScreen() {
             {signupMutation.isPending ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <>
-                <Text style={styles.cuteButtonText}>시작하기</Text>
-              </>
+              <Text style={styles.cuteButtonText}>Get Started</Text>
             )}
           </TouchableOpacity>
 
+          {/* 로그인 링크 현지화 */}
           <View style={styles.loginLink}>
-            <Text style={styles.loginLinkText}>이미 계정이 있으신가요? </Text>
+            <Text style={styles.loginLinkText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => router.push("./login")}>
-              <Text style={styles.loginLinkTextBold}> 로그인하기 </Text>
+              <Text style={styles.loginLinkTextBold}> Log In </Text>
             </TouchableOpacity>
           </View>
         </View>
       </TouchableWithoutFeedback>
-      {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );
 }
@@ -322,6 +290,6 @@ const styles = StyleSheet.create({
   loginLinkTextBold: {
     fontSize: 13,
     color: "#fb89a7",
-    fontWeight: Platform.OS === "ios" ? "900" : "700",
+    fontWeight: Platform.OS === "ios" ? "800" : "900",
   },
 });

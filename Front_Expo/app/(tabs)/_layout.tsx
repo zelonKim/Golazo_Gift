@@ -43,12 +43,12 @@ export default function TabLayout() {
           shadowRadius: 4,
         },
 
-        // ✍️ 한글 글자를 세련되게 다듬는 스타일 추가
+        // ✍️ 영어 텍스트에 맞춰 폰트 크기 밸런스 조정
         tabBarLabelStyle: {
-          fontSize: Platform.OS === "ios" ? 12 : 9, // 글자 크기 조정
+          fontSize: Platform.OS === "ios" ? 12 : 10, // 영어 자수 폭을 고려해 안드로이드 크기 상향 조정
           fontWeight: Platform.OS === "ios" ? "700" : "600", // 글자 두께 조정
           marginTop: Platform.OS === "ios" ? 4 : 1, // 아이콘과 글자 사이 간격 확보
-          marginBottom: Platform.OS === "android" ? 4 : 0,
+          marginBottom: Platform.OS === "android" ? 3 : 0,
         },
       }}
     >
@@ -56,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "홈", // ⭕ 하단에 뜰 한글 이름 지정!
+          title: "Home", // 현지화 적용
           tabBarIcon: ({ focused, color }) => (
             <Home
               size={25}
@@ -71,7 +71,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recipient"
         options={{
-          title: "나의 지인", // ⭕ 한글 이름 지정!
+          title: "People", // 현지화 적용 (미국 앱 스타일)
           tabBarIcon: ({ focused, color }) => (
             <UserPlus
               size={25}
@@ -86,7 +86,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recommend"
         options={{
-          title: "AI 추천", // ⭕ 한글 이름 지정!
+          title: "AI Recs", // 현지화 적용 (자수가 짧아 UI 밸런스에 좋습니다. AI Recommend도 무방)
           tabBarIcon: ({ focused, color }) => (
             <Gift
               size={25}
@@ -101,7 +101,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "히스토리", // ⭕ 한글 이름 지정!
+          title: "History", // 현지화 적용
           tabBarIcon: ({ focused, color }) => (
             <History
               size={25}
@@ -116,7 +116,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="mypage"
         options={{
-          title: "환경 설정", // ⭕ 한글 이름 지정!
+          title: "Settings", // 현지화 적용
           tabBarIcon: ({ focused, color }) => (
             <Settings2
               size={25}
@@ -130,7 +130,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recommendResult"
         options={{
-          title: "추천 결과",
+          title: "Results", // 현지화 적용
           href: null,
         }}
       />

@@ -1,13 +1,57 @@
+"use client";
 import { useTheme } from "@react-navigation/native";
+import * as Localization from "expo-localization";
 import { Tabs } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { Gift, History, Home, Settings2, UserPlus } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-
   const { colors } = useTheme();
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 설정 언어 및 기존 저장 세션 스캔
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  // 🎯 탭바 밸런스를 절대 깨지 않는 초컴팩트 번역 딕셔너리
+  const t = {
+    en: {
+      home: "Home",
+      people: "People",
+      recommend: "AI Recs",
+      history: "History",
+      settings: "Settings",
+      results: "Results",
+    },
+    es: {
+      home: "Inicio",
+      people: "Personas", // 💡 Personas 대신 5글자로 압축!
+      recommend: "Ideas IA", // 💡 Recomendaciones 대신 8글자 꿀조합!
+      history: "Historial",
+      settings: "Ajustes", // 💡 Configuración 쓰면 무조건 UI 터집니다. Ajustes가 신의 한 수!
+      results: "Resultados",
+    },
+  }[lang];
 
   const tabBarHeight =
     Platform.OS === "ios"
@@ -21,21 +65,20 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: "#D1D1D6",
         tabBarHideOnKeyboard: true,
-        tabBarShowLabel: true, // ⭕ 글자 켜기
+        tabBarShowLabel: true,
 
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopWidth: 1,
           borderTopColor: "#F2F2F7",
           height: tabBarHeight,
-          // 📐 글자가 들어왔으므로, 아이콘과 글자가 겹치지 않게 하단 패딩을 성진님 수식 기준으로 정밀 조정
           paddingBottom:
             Platform.OS === "ios"
               ? insets.bottom
               : insets.bottom > 0
                 ? insets.bottom + 6
                 : 12,
-          paddingTop: 8, // 상단 여백을 살짝 늘려 아이콘 위치 안정화
+          paddingTop: 8,
           elevation: 4,
           shadowColor: colors.primary,
           shadowOffset: { width: 0, height: -2 },
@@ -43,11 +86,10 @@ export default function TabLayout() {
           shadowRadius: 4,
         },
 
-        // ✍️ 영어 텍스트에 맞춰 폰트 크기 밸런스 조정
         tabBarLabelStyle: {
-          fontSize: Platform.OS === "ios" ? 12 : 10, // 영어 자수 폭을 고려해 안드로이드 크기 상향 조정
-          fontWeight: Platform.OS === "ios" ? "700" : "600", // 글자 두께 조정
-          marginTop: Platform.OS === "ios" ? 4 : 1, // 아이콘과 글자 사이 간격 확보
+          fontSize: Platform.OS === "ios" ? 12 : 10,
+          fontWeight: Platform.OS === "ios" ? "700" : "600",
+          marginTop: Platform.OS === "ios" ? 4 : 1,
           marginBottom: Platform.OS === "android" ? 3 : 0,
         },
       }}
@@ -56,7 +98,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home", // 현지화 적용
+          title: t.home,
           tabBarIcon: ({ focused, color }) => (
             <Home
               size={25}
@@ -67,11 +109,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. 지인 관리 탭 */}
+      {/* 2. 지인 관리 탭 */}
       <Tabs.Screen
         name="recipient"
         options={{
-          title: "People", // 현지화 적용 (미국 앱 스타일)
+          title: t.people,
           tabBarIcon: ({ focused, color }) => (
             <UserPlus
               size={25}
@@ -82,11 +124,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. AI 선물 추천 탭 */}
+      {/* 3. AI 선물 추천 탭 */}
       <Tabs.Screen
         name="recommend"
         options={{
-          title: "AI Recs", // 현지화 적용 (자수가 짧아 UI 밸런스에 좋습니다. AI Recommend도 무방)
+          title: t.recommend,
           tabBarIcon: ({ focused, color }) => (
             <Gift
               size={25}
@@ -97,11 +139,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. 히스토리 탭 */}
+      {/* 4. 히스토리 탭 */}
       <Tabs.Screen
         name="history"
         options={{
-          title: "History", // 현지화 적용
+          title: t.history,
           tabBarIcon: ({ focused, color }) => (
             <History
               size={25}
@@ -116,7 +158,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="mypage"
         options={{
-          title: "Settings", // 현지화 적용
+          title: t.settings,
           tabBarIcon: ({ focused, color }) => (
             <Settings2
               size={25}
@@ -130,7 +172,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recommendResult"
         options={{
-          title: "Results", // 현지화 적용
+          title: t.results,
           href: null,
         }}
       />

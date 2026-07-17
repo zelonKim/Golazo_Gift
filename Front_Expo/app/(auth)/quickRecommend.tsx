@@ -1,6 +1,8 @@
+"use client";
 import { client } from "@/api/client";
 import Slider from "@react-native-community/slider";
 import { useMutation } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { ArrowLeft } from "lucide-react-native";
@@ -32,45 +34,144 @@ interface RecommendRequest {
   notes: string | null;
 }
 
-const PURPOSE_OPTIONS = [
-  { value: "FRIEND_BDAY", label: "Friend's BDay" },
-  { value: "LOVER_BDAY", label: "Partner's BDay" },
-  { value: "PARENTS_BDAY", label: "Parents' BDay" },
-  { value: "COUPLE_ANNIV", label: "Couple Anniv" },
-  { value: "WED_ANNIV", label: "Wedding Anniv" },
-  { value: "GRADUATE", label: "Graduation" },
-  { value: "EMPLOY", label: "New Job" },
-  { value: "HOUSEWARMING", label: "Housewarming" },
-  { value: "WEDDING", label: "Wedding" },
-  { value: "BRIDAL_SHOWER", label: "Bridal Shower" },
-  { value: "BABY_SHOWER", label: "Baby Shower" },
-  { value: "BIRTH", label: "New Baby" },
-  { value: "CHRISTMAS", label: "Christmas" },
-  { value: "VALENTINE", label: "Valentine's" },
-  { value: "MOTHERS_DAY", label: "Mother's Day" },
-  { value: "FATHERS_DAY", label: "Father's Day" },
-  { value: "THANK_YOU", label: "Thank You" },
-  { value: "GET_WELL", label: "Get Well" },
-  { value: "SELF_GIFT", label: "For Me" },
+// 🎯 미국 내 히스패닉 맞춤형 퀵 입력 화면 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: " ✏️ Enter Details",
+    mainTitle: "Custom ",
+    mainTitleHighlight: "AI Gift Picks",
+    subTitle:
+      "Tell us about the recipient,\nand our AI will find the perfect gift! 🤖",
+
+    // 세션 라벨들
+    labelOccasion: "🥳 Gift Occasion",
+    labelAgeGroup: "🎂 Age Group",
+    labelGender: "🧬 Gender",
+    labelHobbies: "🎨 Hobbies & Interests (Optional)",
+    labelNotes: "⭐️ Important Notes (Optional)",
+    labelMinBudget: "🪙 Min Budget",
+    labelMaxBudget: "💎 Max Budget",
+
+    // 인풋 플레이스홀더
+    placeholderHobbies: "e.g. Reading, Hiking, Coffee brewing",
+    placeholderNotes: "e.g. Dislikes perfumes, loves cats, allergic to nuts",
+
+    // 버튼 및 로딩 텍스트
+    submitBtn: "Get Gift Recommendations 🤖",
+    loadingBtn: "AI is picking the gifts...",
+
+    // 에러 핸들링
+    errorTitle: "Error 😢",
+    errorMsg:
+      "Failed to connect with the AI engine. Please try again in a moment.",
+  },
+  es: {
+    headerTitle: " ✏️ Ingresa datos", // 💡 간결하고 직관적인 '데이터 입력'
+    mainTitle: "Regalos ",
+    mainTitleHighlight: "IA a tu medida", // 💡 2030 라틴 감성에 맞춘 세련된 문구
+    subTitle:
+      "Cuéntanos sobre esa persona,\n¡y la IA encontrará el regalo ideal! 🤖",
+
+    // 세션 라벨들
+    labelOccasion: "🥳 Motivo del regalo",
+    labelAgeGroup: "🎂 Edad",
+    labelGender: "🧬 Género",
+    labelHobbies: "🎨 Hobbies e intereses (Opcional)",
+    labelNotes: "⭐️ Notas importantes (Opcional)",
+    labelMinBudget: "🪙 Presupuesto mín.",
+    labelMaxBudget: "💎 Presupuesto máx.",
+
+    // 인풋 플레이스홀더
+    placeholderHobbies: "Ej. Lectura, senderismo, café",
+    placeholderNotes: "Ej. No le gustan los perfumes, ama los gatos, etc.",
+
+    // 버튼 및 로딩 텍스트
+    submitBtn: "Buscar recomendaciones 🤖",
+    loadingBtn: "La IA está buscando regalos..",
+
+    // 에러 핸들링
+    errorTitle: "Error 😢",
+    errorMsg: "No se pudo conectar con el motor de IA. Inténtalo de nuevo.",
+  },
+};
+
+// 🎯 목적 선택지 다국어 리스트
+const getPurposeOptions = (lang: "en" | "es") => [
+  {
+    value: "FRIEND_BDAY",
+    label: lang === "es" ? "Cumple amigo/a" : "Friend's BDay",
+  },
+  {
+    value: "LOVER_BDAY",
+    label: lang === "es" ? "Cumple pareja" : "Partner's BDay",
+  },
+  {
+    value: "PARENTS_BDAY",
+    label: lang === "es" ? "Cumple papás" : "Parents' BDay",
+  },
+  {
+    value: "COUPLE_ANNIV",
+    label: lang === "es" ? "Aniv. de novios" : "Couple Anniv",
+  },
+  {
+    value: "WED_ANNIV",
+    label: lang === "es" ? "Aniv. de bodas" : "Wedding Anniv",
+  },
+
+  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
+  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
+  {
+    value: "HOUSEWARMING",
+    label: lang === "es" ? "Estrenar casa" : "Housewarming",
+  },
+  { value: "WEDDING", label: lang === "es" ? "Boda" : "Wedding" },
+  {
+    value: "BRIDAL_SHOWER",
+    label: lang === "es" ? "Despedida soltera" : "Bridal Shower",
+  },
+  {
+    value: "BABY_SHOWER",
+    label: lang === "es" ? "Baby Shower" : "Baby Shower",
+  },
+  { value: "BIRTH", label: lang === "es" ? "Nacimiento" : "New Baby" },
+  { value: "CHRISTMAS", label: lang === "es" ? "Navidad" : "Christmas" },
+  {
+    value: "REYES_MAGOS",
+    label: lang === "es" ? "Día de Reyes" : "Three Kings",
+  },
+  { value: "VALENTINE", label: lang === "es" ? "San Valentín" : "Valentine's" },
+  {
+    value: "MOTHERS_DAY",
+    label: lang === "es" ? "Día de la Madre" : "Mother's Day",
+  },
+  {
+    value: "FATHERS_DAY",
+    label: lang === "es" ? "Día del Padre" : "Father's Day",
+  },
+  { value: "THANK_YOU", label: lang === "es" ? "Agradecimiento" : "Thank You" },
+  { value: "GET_WELL", label: lang === "es" ? "Recuperación" : "Get Well" },
+  { value: "SELF_GIFT", label: lang === "es" ? "Para mí" : "For Me" },
 ];
 
-const AGE_OPTIONS = [
-  { value: "0", label: "Under 10" },
-  { value: "10", label: "10s" },
-  { value: "20", label: "20s" },
-  { value: "30", label: "30s" },
-  { value: "40", label: "40s" },
-  { value: "50", label: "50s" },
-  { value: "60", label: "60s" },
-  { value: "70", label: "70s" },
-  { value: "80", label: "80s & Above" },
+// 🎯 연령대 다국어 리스트
+const getAgeOptions = (lang: "en" | "es") => [
+  { value: "0", label: lang === "es" ? "Menor de 10" : "Under 10" },
+  { value: "10", label: lang === "es" ? "10 a 19 años" : "10s" },
+  { value: "20", label: lang === "es" ? "20 a 29 años" : "20s" },
+  { value: "30", label: lang === "es" ? "30 a 39 años" : "30s" },
+  { value: "40", label: lang === "es" ? "40 a 49 años" : "40s" },
+  { value: "50", label: lang === "es" ? "50 a 59 años" : "50s" },
+  { value: "60", label: lang === "es" ? "60 a 69 años" : "60s" },
+  { value: "70", label: lang === "es" ? "70 a 79 años" : "70s" },
+  { value: "80", label: lang === "es" ? "80 o más" : "80s & Above" },
 ];
 
-const GENDER_OPTIONS = [
-  { value: "M", label: "Male" },
-  { value: "F", label: "Female" },
-  { value: "N", label: "Non-binary" },
-  { value: "P", label: "Private" },
+// 🎯 성별 다국어 리스트
+const getGenderOptions = (lang: "en" | "es") => [
+  { value: "M", label: lang === "es" ? "Hombre" : "Male" },
+  { value: "F", label: lang === "es" ? "Mujer" : "Female" },
+  { value: "N", label: lang === "es" ? "No binario" : "Non-binary" },
+  { value: "P", label: lang === "es" ? "Privado" : "Private" },
 ];
 
 const fetchQuickRecommendation = async (payload: RecommendRequest) => {
@@ -78,7 +179,6 @@ const fetchQuickRecommendation = async (payload: RecommendRequest) => {
   return response.data.recommendations || [];
 };
 
-// 🎁 뱅글뱅글 도는 선물 상자 애니메이션 컴포넌트
 function SpinningGift() {
   const spinValue = useRef(new Animated.Value(0)).current;
 
@@ -86,9 +186,9 @@ function SpinningGift() {
     const spinAnimation = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: 1200, // 1.2초에 한 바퀴
+        duration: 1200,
         easing: Easing.linear,
-        useNativeDriver: true, // 네이티브 스레드 연동으로 끊김 없음
+        useNativeDriver: true,
       }),
     );
     spinAnimation.start();
@@ -110,13 +210,35 @@ function SpinningGift() {
 export default function QuickRecommendScreen() {
   const router = useRouter();
 
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 설정 언어 및 기존 저장 세션 스캔
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  const t = translations[lang];
+
   const [purpose, setPurpose] = useState("FRIEND_BDAY");
   const [ageGroup, setAgeGroup] = useState("20");
-  const [gender, setGender] = useState("P"); // 👈 영어로 기본값 설정
+  const [gender, setGender] = useState("P");
   const [hobbies, setHobbies] = useState("");
   const [notes, setNotes] = useState("");
 
-  // 🪙 기존의 0원 ~ 150,000원 슬라이더 초기상태 완전히 동일하게 유지!
   const [minBudget, setMinBudget] = useState(0);
   const [maxBudget, setMaxBudget] = useState(300);
 
@@ -131,10 +253,7 @@ export default function QuickRecommendScreen() {
     },
     onError: (error) => {
       console.error("Recommendation failed:", error);
-      Alert.alert(
-        "Error 🥲",
-        "Failed to connect with the AI engine. Please try again in a moment.",
-      );
+      Alert.alert(t.errorTitle, t.errorMsg);
     },
   });
 
@@ -152,7 +271,6 @@ export default function QuickRecommendScreen() {
     mutate(payload);
   };
 
-  // 🪙 원화 단위 포맷팅 방식 100% 동일 유지!
   const formatPrice = (num: number) => {
     return "$" + num.toLocaleString();
   };
@@ -196,7 +314,7 @@ export default function QuickRecommendScreen() {
         >
           <ArrowLeft size={24} color="#334155" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}> ✏️ Enter Details</Text>
+        <Text style={styles.headerTitle}>{t.headerTitle}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -206,42 +324,40 @@ export default function QuickRecommendScreen() {
       >
         <View style={styles.welcomeSection}>
           <Text style={styles.mainTitle}>
-            Custom <Text style={styles.highlightText}>AI Gift Picks</Text>
+            {t.mainTitle}
+            <Text style={styles.highlightText}>{t.mainTitleHighlight}</Text>
           </Text>
-          <Text style={styles.subTitle}>
-            Tell us about the recipient,{"\n"}and our AI will find the perfect
-            gift! 🤖
-          </Text>
+          <Text style={styles.subTitle}>{t.subTitle}</Text>
         </View>
 
         {/* 메인 폼 카드 */}
         <View style={styles.card}>
           {/* 1. 선물 목적 */}
           <View style={[styles.inputGroup, { marginTop: 8 }]}>
-            <Text style={styles.label}>🥳 Gift Occasion</Text>
-            {renderOptionSelector(PURPOSE_OPTIONS, purpose, setPurpose)}
+            <Text style={styles.label}>{t.labelOccasion}</Text>
+            {renderOptionSelector(getPurposeOptions(lang), purpose, setPurpose)}
           </View>
 
           {/* 2. 연령대 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>🎂 Age Group</Text>
-            {renderOptionSelector(AGE_OPTIONS, ageGroup, setAgeGroup)}
+            <Text style={styles.label}>{t.labelAgeGroup}</Text>
+            {renderOptionSelector(getAgeOptions(lang), ageGroup, setAgeGroup)}
           </View>
 
           {/* 3. 성별 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>🧬 Gender</Text>
+            <Text style={styles.label}>{t.labelGender}</Text>
             <View style={styles.genderRow}>
-              {renderOptionSelector(GENDER_OPTIONS, gender, setGender)}
+              {renderOptionSelector(getGenderOptions(lang), gender, setGender)}
             </View>
           </View>
 
           {/* 4. 취미 및 관심사 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>🎨 Hobbies & Interests (Optional)</Text>
+            <Text style={styles.label}>{t.labelHobbies}</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. Reading, Hiking, Coffee brewing"
+              placeholder={t.placeholderHobbies}
               placeholderTextColor="#CBD5E1"
               value={hobbies}
               onChangeText={setHobbies}
@@ -250,10 +366,10 @@ export default function QuickRecommendScreen() {
 
           {/* 5. 특이사항 */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>⭐️ Important Notes (Optional)</Text>
+            <Text style={styles.label}>{t.labelNotes}</Text>
             <TextInput
               style={[styles.textInput, styles.textArea]}
-              placeholder="e.g. Dislikes perfumes, loves cats, allergic to nuts"
+              placeholder={t.placeholderNotes}
               placeholderTextColor="#CBD5E1"
               multiline
               numberOfLines={3}
@@ -263,12 +379,12 @@ export default function QuickRecommendScreen() {
             />
           </View>
 
-          {/* 6. 예산 슬라이더 섹션 (기존 제어 로직 완전히 유지!) */}
+          {/* 6. 예산 슬라이더 섹션 */}
           <View style={styles.budgetContainer}>
             {/* 최소 예산 */}
             <View style={styles.budgetWrapper}>
               <View style={styles.budgetTextRow}>
-                <Text style={styles.budgetLabel}>🪙 Min Budget</Text>
+                <Text style={styles.budgetLabel}>{t.labelMinBudget}</Text>
                 <Text style={styles.budgetValueBadge}>
                   {formatPrice(minBudget)}
                 </Text>
@@ -291,7 +407,7 @@ export default function QuickRecommendScreen() {
             {/* 최대 예산 */}
             <View style={styles.budgetWrapper}>
               <View style={styles.budgetTextRow}>
-                <Text style={styles.budgetLabel}>💎 Max Budget</Text>
+                <Text style={styles.budgetLabel}>{t.labelMaxBudget}</Text>
                 <Text style={[styles.budgetValueBadge, { color: "#E11D48" }]}>
                   {maxBudget >= 300 ? "$300+" : formatPrice(maxBudget)}
                 </Text>
@@ -320,15 +436,11 @@ export default function QuickRecommendScreen() {
           >
             {isPending ? (
               <View style={styles.loadingRow}>
-                <Text style={styles.submitButtonText}>
-                  AI is picking the gifts...
-                </Text>
+                <Text style={styles.submitButtonText}>{t.loadingBtn}</Text>
                 <SpinningGift />
               </View>
             ) : (
-              <Text style={styles.submitButtonText}>
-                Get Gift Recommendations 🤖
-              </Text>
+              <Text style={styles.submitButtonText}>{t.submitBtn}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -356,7 +468,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   welcomeSection: { alignItems: "center", marginTop: 12, marginBottom: 24 },
   mainTitle: {
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: Platform.OS === "ios" ? "800" : "700",
     color: "#0F172A",
   },
@@ -404,23 +516,6 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: { color: "#FF7096", fontWeight: "700" },
   genderRow: { flexDirection: "row", gap: 10 },
-  genderButton: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderButtonSelected: { backgroundColor: "#FFECF0", borderColor: "#FF7096" },
-  genderText: {
-    fontSize: Platform.OS === "ios" ? 13 : 12,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  genderTextSelected: { color: "#FF7096", fontWeight: "700" },
   textInput: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -433,28 +528,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   textArea: { height: 90, paddingTop: 12, paddingBottom: 12 },
-  mbtiGrid: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  mbtiBox: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "#F1F5F9",
-    borderRadius: 14,
-    padding: 3,
-    height: 46,
-  },
-  mbtiBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-  },
-  mbtiBtnSelected: { backgroundColor: "#FF7096" },
-  mbtiBtnText: {
-    fontSize: Platform.OS === "ios" ? 13 : 12,
-    fontWeight: "700",
-    color: "#94A3B8",
-  },
-  mbtiBtnTextSelected: { color: "#FFFFFF" },
   budgetContainer: {
     backgroundColor: "#F8FAFC",
     borderRadius: 20,
@@ -497,6 +570,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   disabledButton: { backgroundColor: "#FFAEC4" },
-  submitButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  submitButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   loadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
 });

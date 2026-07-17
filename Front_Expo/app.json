@@ -2,7 +2,9 @@
   "expo": {
     "name": "Golazo Gift",
     "slug": "Golazo-gift-us",
-    "scheme": ["golazo-gift-us"],
+    "scheme": [
+      "golazo-gift-us"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -58,7 +60,8 @@
             "useFrameworks": "dynamic"
           }
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

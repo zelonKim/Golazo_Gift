@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { client } from "@/api/client";
@@ -23,48 +23,148 @@ interface Product {
   image_url: string;
 }
 
-// 🎯 백엔드 EVENT PURPOSE_CHOICES 완벽 매핑
-const PURPOSE_OPTIONS = [
-  { value: "FRIEND_BDAY", label: "Friend's BDay" },
-  { value: "LOVER_BDAY", label: "Partner's BDay" },
-  { value: "PARENTS_BDAY", label: "Parents' BDay" },
-  { value: "COUPLE_ANNIV", label: "Couple Anniv" },
-  { value: "WED_ANNIV", label: "Wedding Anniv" },
-  { value: "GRADUATE", label: "Graduation" },
-  { value: "EMPLOY", label: "New Job" },
-  { value: "HOUSEWARMING", label: "Housewarming" },
-  { value: "WEDDING", label: "Wedding" },
-  { value: "BRIDAL_SHOWER", label: "Bridal Shower" },
-  { value: "BABY_SHOWER", label: "Baby Shower" },
-  { value: "BIRTH", label: "New Baby" },
-  { value: "CHRISTMAS", label: "Christmas" },
-  { value: "VALENTINE", label: "Valentine's" },
-  { value: "MOTHERS_DAY", label: "Mother's Day" },
-  { value: "FATHERS_DAY", label: "Father's Day" },
-  { value: "THANK_YOU", label: "Thank You" },
-  { value: "GET_WELL", label: "Get Well" },
-  { value: "SELF_GIFT", label: "For Me" },
+// 🎯 미국 내 히스패닉 타겟용 퀵 입력 웹 텍스트 딕셔너리
+const translations = {
+  en: {
+    backBtn: "Go Back",
+    badgeText: "Enter Details",
+    mainTitle: "Custom ",
+    mainTitleHighlight: "AI Gift Picks",
+    subTitle:
+      "Tell us about the recipient, and our AI will find the perfect gift! 🤖",
+
+    // 라벨들
+    labelOccasion: "🥳 Gift Occasion",
+    labelAgeGroup: "🎂 Age Group",
+    labelGender: "🧬 Gender",
+    labelHobbies: "🎨 Hobbies / Interests (Optional)",
+    labelNotes: "⭐️ Notes / Preferences (Optional)",
+    labelMinBudget: "🪙 Min Budget",
+    labelMaxBudget: "💎 Max Budget",
+
+    // 인풋 플레이스홀더
+    placeholderHobbies: "e.g. Reading, Hiking, Coffee brewing",
+    placeholderNotes: "e.g. Dislikes perfumes, loves cats, allergic to nuts",
+
+    // 에러 및 경고 멘트
+    budgetWarning: "⚠️ Min budget cannot exceed max budget.",
+    errorMsg:
+      "Failed to connect with the AI engine. Please try again in a moment.",
+
+    // 버튼
+    submitBtn: "Get Gift Recommendations",
+    loadingBtn: "AI is picking the gifts...",
+  },
+  es: {
+    backBtn: "Volver",
+    badgeText: "Ingresa datos",
+    mainTitle: "Regalos IA ",
+    mainTitleHighlight: "a tu medida", // 💡 성진님의 시그니처 초압축 문구 웹 적용!
+    subTitle:
+      "Cuéntanos sobre esa persona, ¡y la IA encontrará el regalo ideal! 🤖",
+
+    // 라벨들
+    labelOccasion: "🥳 Motivo del regalo",
+    labelAgeGroup: "🎂 Edad",
+    labelGender: "🧬 Género",
+    labelHobbies: "🎨 Hobbies e intereses (Opcional)",
+    labelNotes: "⭐️ Notas importantes (Opcional)",
+    labelMinBudget: "🪙 Presupuesto mín.",
+    labelMaxBudget: "💎 Presupuesto máx.",
+
+    // 인풋 플레이스홀더
+    placeholderHobbies: "Ej. Lectura, senderismo, café",
+    placeholderNotes: "Ej. No le gustan los perfumes, ama los gatos, etc.",
+
+    // 에러 및 경고 멘트
+    budgetWarning: "⚠️ El presupuesto mínimo no puede superar al máximo.",
+    errorMsg: "No se pudo conectar con el motor de IA. Inténtalo de nuevo.",
+
+    // 버튼
+    submitBtn: "Buscar recomendaciones",
+    loadingBtn: "La IA está buscando regalos...",
+  },
+};
+
+// 🎯 목적 선택지 다국어 리스트 (성진님의 'Aniv. de novios' 치트키 탑재! 💖)
+const getPurposeOptions = (lang: "en" | "es") => [
+  {
+    value: "FRIEND_BDAY",
+    label: lang === "es" ? "Cumple amigo/a" : "Friend's BDay",
+  },
+  {
+    value: "LOVER_BDAY",
+    label: lang === "es" ? "Cumple pareja" : "Partner's BDay",
+  },
+  {
+    value: "PARENTS_BDAY",
+    label: lang === "es" ? "Cumple papás" : "Parents' BDay",
+  },
+  {
+    value: "COUPLE_ANNIV",
+    label: lang === "es" ? "Aniv. de novios" : "Couple Anniv",
+  }, // 💑 커플 기념일 완벽 로컬라이징!
+  {
+    value: "WED_ANNIV",
+    label: lang === "es" ? "Aniv. de bodas" : "Wedding Anniv",
+  },
+  {
+    value: "REYES_MAGOS",
+    label: lang === "es" ? "Día de Reyes" : "Three Kings",
+  }, // 👑 동방박사 세트 추가!
+  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
+  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
+  {
+    value: "HOUSEWARMING",
+    label: lang === "es" ? "Estrenar casa" : "Housewarming",
+  },
+  { value: "WEDDING", label: lang === "es" ? "Boda" : "Wedding" },
+  {
+    value: "BRIDAL_SHOWER",
+    label: lang === "es" ? "Despedida soltera" : "Bridal Shower",
+  },
+  {
+    value: "BABY_SHOWER",
+    label: lang === "es" ? "Baby Shower" : "Baby Shower",
+  },
+  { value: "BIRTH", label: lang === "es" ? "Nacimiento" : "New Baby" },
+  { value: "CHRISTMAS", label: lang === "es" ? "Navidad" : "Christmas" },
+  { value: "VALENTINE", label: lang === "es" ? "San Valentín" : "Valentine's" },
+  {
+    value: "MOTHERS_DAY",
+    label: lang === "es" ? "Día de la Madre" : "Mother's Day",
+  },
+  {
+    value: "FATHERS_DAY",
+    label: lang === "es" ? "Día del Padre" : "Father's Day",
+  },
+  { value: "THANK_YOU", label: lang === "es" ? "Agradecimiento" : "Thank You" },
+  { value: "GET_WELL", label: lang === "es" ? "Recuperación" : "Get Well" },
+  { value: "SELF_GIFT", label: lang === "es" ? "Para mí" : "For Me" },
 ];
 
-// 🎯 백엔드 RECIPIENT AGE_CHOICES 완벽 매핑
-const AGE_OPTIONS = [
-  { value: "0", label: "Under 10" },
-  { value: "10", label: "10s" },
-  { value: "20", label: "20s" },
-  { value: "30", label: "30s" },
-  { value: "40", label: "40s" },
-  { value: "50", label: "50s" },
-  { value: "60", label: "60s" },
-  { value: "70", label: "70s" },
-  { value: "80", label: "80s & Above" },
+// 🎯 연령대 다국어 리스트
+const getAgeOptions = (lang: "en" | "es") => [
+  { value: "0", label: lang === "es" ? "Menor de 10" : "Under 10" },
+  { value: "10", label: lang === "es" ? "10 a 19 años" : "10s" },
+  { value: "20", label: lang === "es" ? "20 a 29 años" : "20s" },
+  { value: "30", label: lang === "es" ? "30 a 39 años" : "30s" },
+  { value: "40", label: lang === "es" ? "40 a 49 años" : "40s" },
+  { value: "50", label: lang === "es" ? "50 a 59 años" : "50s" },
+  { value: "60", label: lang === "es" ? "60 a 69 años" : "60s" },
+  { value: "70", label: lang === "es" ? "70 a 79 años" : "70s" },
+  { value: "80", label: lang === "es" ? "80 o más" : "80s & Above" },
 ];
 
-// 🎯 백엔드 RECIPIENT GENDER_CHOICES 완벽 매핑
-const GENDER_OPTIONS = [
-  { value: "M", label: "Male" },
-  { value: "F", label: "Female" },
-  { value: "N", label: "Non-binary" },
-  { value: "P", label: "Prefer not to say" },
+// 🎯 성별 다국어 리스트
+const getGenderOptions = (lang: "en" | "es") => [
+  { value: "M", label: lang === "es" ? "Hombre" : "Male" },
+  { value: "F", label: lang === "es" ? "Mujer" : "Female" },
+  { value: "N", label: lang === "es" ? "No binario" : "Non-binary" },
+  {
+    value: "P",
+    label: lang === "es" ? "Prefiero no decirlo" : "Prefer not to say",
+  },
 ];
 
 const fetchQuickRecommendation = async (
@@ -77,6 +177,19 @@ const fetchQuickRecommendation = async (
 export default function QuickRecommendPage() {
   const router = useRouter();
 
+  // 💡 글로벌 언어 상태 (기본값은 하이드레이션 방지를 위해 'en' 세팅)
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 컴포넌트 마운트 시 브라우저 언어 실시간 추적 감지!
+  useEffect(() => {
+    const browserLang = navigator.language || (navigator as any).userLanguage;
+    if (browserLang && browserLang.startsWith("es")) {
+      setLang("es");
+    }
+  }, []);
+
+  const t = translations[lang];
+
   const [formData, setFormData] = useState({
     age_group: "20",
     gender: "P",
@@ -85,7 +198,6 @@ export default function QuickRecommendPage() {
     notes: "",
   });
 
-  // 🪙 기존 슬라이더의 스케일 데이터(0 ~ 300,000)를 온전히 유지
   const [minBudget, setMinBudget] = useState(0);
   const [maxBudget, setMaxBudget] = useState(300);
 
@@ -97,9 +209,7 @@ export default function QuickRecommendPage() {
     },
     onError: (error) => {
       console.error("Recommendation failed:", error);
-      alert(
-        "Failed to connect with the AI engine. Please try again in a moment.",
-      );
+      alert(t.errorMsg);
     },
   });
 
@@ -140,7 +250,7 @@ export default function QuickRecommendPage() {
           type="button"
           onClick={() => router.push("/")}
           className="p-2 text-slate-700 hover:text-pink-400 transition-colors cursor-pointer"
-          aria-label="Go Back"
+          aria-label={t.backBtn}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -163,17 +273,16 @@ export default function QuickRecommendPage() {
         {/* 상단 헤더 타이틀 */}
         <div className="text-center mb-10">
           <div className="inline-flex animate-bounce uppercase items-center gap-1.5 bg-white/80 border border-pink-200/60 text-pink-500 font-bold px-3 py-1 rounded-full text-[13px] tracking-wider mb-3 shadow-sm shadow-pink-100/50">
-            <span>✏️</span> Enter Details
+            <span>✏️</span> {t.badgeText}
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-none">
-            Custom{" "}
+            {t.mainTitle}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-500">
-              AI Gift Picks
+              {t.mainTitleHighlight}
             </span>
           </h1>
           <p className="text-slate-700/80 mt-3 text-sm font-medium">
-            Tell us about the recipient, and our AI will find the perfect gift!
-            🤖
+            {t.subTitle}
           </p>
         </div>
 
@@ -186,7 +295,7 @@ export default function QuickRecommendPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="flex items-center gap-1 text-sm font-bold text-slate-700 mb-2 ml-1">
-                🥳 Gift Occasion
+                {t.labelOccasion}
               </label>
               <select
                 name="purpose"
@@ -194,7 +303,7 @@ export default function QuickRecommendPage() {
                 onChange={handleChange}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[15px] focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-50/60 transition bg-white text-slate-800 font-medium cursor-pointer shadow-sm"
               >
-                {PURPOSE_OPTIONS.map((opt) => (
+                {getPurposeOptions(lang).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -204,7 +313,7 @@ export default function QuickRecommendPage() {
 
             <div>
               <label className="flex items-center gap-1 text-sm font-bold text-slate-700 mb-2 ml-1">
-                🎂 Age Group
+                {t.labelAgeGroup}
               </label>
               <select
                 name="age_group"
@@ -212,7 +321,7 @@ export default function QuickRecommendPage() {
                 onChange={handleChange}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[15px] focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-50/60 transition bg-white text-slate-800 font-medium cursor-pointer shadow-sm"
               >
-                {AGE_OPTIONS.map((opt) => (
+                {getAgeOptions(lang).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -225,7 +334,7 @@ export default function QuickRecommendPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="flex items-center gap-1 text-sm font-bold text-slate-700 mb-2 ml-1">
-                🧬 Gender
+                {t.labelGender}
               </label>
               <select
                 name="gender"
@@ -233,7 +342,7 @@ export default function QuickRecommendPage() {
                 onChange={handleChange}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[15px] focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-50/60 transition bg-white text-slate-800 font-medium cursor-pointer shadow-sm"
               >
-                {GENDER_OPTIONS.map((opt) => (
+                {getGenderOptions(lang).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -243,12 +352,12 @@ export default function QuickRecommendPage() {
 
             <div>
               <label className="flex items-center gap-1 text-sm font-bold text-slate-700 mb-2 ml-1">
-                🎨 Hobbies / Interests (Optional)
+                {t.labelHobbies}
               </label>
               <input
                 type="text"
                 name="hobbies"
-                placeholder="e.g. Reading, Hiking, Coffee brewing"
+                placeholder={t.placeholderHobbies}
                 value={formData.hobbies}
                 onChange={handleChange}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[15px] focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-50/60 transition placeholder:text-slate-300 text-slate-800 font-medium shadow-sm"
@@ -259,11 +368,11 @@ export default function QuickRecommendPage() {
           {/* 4열: 특이사항 */}
           <div>
             <label className="flex items-center gap-1 text-sm font-bold text-slate-700 mb-2 ml-1">
-              ⭐️ Notes / Preferences (Optional)
+              {t.labelNotes}
             </label>
             <textarea
               name="notes"
-              placeholder="e.g. Dislikes perfumes, loves cats, allergic to nuts"
+              placeholder={t.placeholderNotes}
               value={formData.notes}
               onChange={handleChange}
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[15px] focus:outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-50/60 transition placeholder:text-slate-300 text-slate-800 font-medium h-24 resize-none shadow-sm"
@@ -276,7 +385,7 @@ export default function QuickRecommendPage() {
             <div className="flex flex-col">
               <div className="flex justify-between items-center mb-3 px-1">
                 <label className="text-sm font-bold text-slate-600">
-                  🪙 Min Budget
+                  {t.labelMinBudget}
                 </label>
                 <span className="text-[13px] font-black text-pink-600 bg-white border border-pink-100 px-2 py-0.5 rounded-full shadow-sm select-none">
                   {formatPrice(minBudget)}
@@ -312,7 +421,7 @@ export default function QuickRecommendPage() {
             <div className="flex flex-col">
               <div className="flex justify-between items-center mb-3 px-1">
                 <label className="text-sm font-bold text-slate-600">
-                  💎 Max Budget
+                  {t.labelMaxBudget}
                 </label>
                 <span className="text-[13px] font-black text-rose-600 bg-white border border-rose-100 px-2 py-0.5 rounded-full shadow-sm select-none">
                   {maxBudget >= 300 ? "$300+" : formatPrice(maxBudget)}
@@ -335,7 +444,7 @@ export default function QuickRecommendPage() {
                     [&::-webkit-slider-thumb]:w-5 
                     [&::-webkit-slider-thumb]:rounded-full 
                     [&::-webkit-slider-thumb]:bg-rose-500 
-                    [&::-webkit-webkit-slider-thumb]:shadow-md
+                    [&::-webkit-slider-thumb]:shadow-md
                     [&::-webkit-slider-thumb]:transition-transform
                     [&::-webkit-slider-thumb]:duration-100
                     hover:[&::-webkit-slider-thumb]:scale-110
@@ -347,7 +456,7 @@ export default function QuickRecommendPage() {
 
           {minBudget === maxBudget && (
             <p className="text-[13px] text-slate-500/90 text-center col-span-1 sm:col-span-2 mt-2 animate-fade-in">
-              ⚠️ Min budget cannot exceed max budget.
+              {t.budgetWarning}
             </p>
           )}
 
@@ -359,12 +468,12 @@ export default function QuickRecommendPage() {
           >
             {isPending ? (
               <>
-                <span>AI is picking the gifts...</span>
+                <span>{t.loadingBtn}</span>
                 <span className="animate-spin text-lg">🎁</span>
               </>
             ) : (
               <>
-                <span>Get Gift Recommendations</span>
+                <span>{t.submitBtn}</span>
                 <span className="text-xl">🤖</span>
               </>
             )}

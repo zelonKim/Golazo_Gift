@@ -1,3 +1,5 @@
+"use client";
+import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { ArrowLeft, BookmarkCheck } from "lucide-react-native";
@@ -26,10 +28,76 @@ interface Product {
   image_url: string;
 }
 
+// 🎯 미국 내 히스패닉 맞춤형 퀵 추천 결과 화면 텍스트 딕셔너리
+const translations = {
+  en: {
+    loadingText: "Loading your results...",
+    headerBadge: "🎉 Recommended",
+    mainTitle: "🤖 AI's ",
+    mainTitleHighlight: "Top Picks",
+    subTitle:
+      "Here are the perfect gifts analyzed\nbased on the details you provided.",
+    priceVaries: "Price Varies",
+    whyAiLabel: "🤖 WHY AI RECOMMENDS",
+    buyBtn: "🎁 Buy on Amazon ➔",
+    saveBtn: "Save These Gift Picks",
+
+    // 알림 메시지
+    alertNoticeTitle: "Notice",
+    alertNoData:
+      "No recommendation results found. Please enter your details again. 🥲",
+    alertAccountTitle: "Account Required",
+    alertAccountMsg: "Sign up to save your gift recommendation history!",
+  },
+  es: {
+    loadingText: "Cargando tus resultados...",
+    headerBadge: "🎉 Recomendado",
+    mainTitle: "🤖 Selecciones ",
+    mainTitleHighlight: "de la IA", // 💡 'AI's Top Picks' 대응하는 세련된 문구
+    subTitle:
+      "Aquí tienes los regalos ideales analizados\nsegún la información que nos diste.",
+    priceVaries: "Precio variable",
+    whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
+    buyBtn: "🎁 Comprar en Amazon ➔",
+    saveBtn: "Guardar estas ideas", // 💡 가로폭 붕괴 방지를 위해 'ideas'로 축약!
+
+    // 알림 메시지
+    alertNoticeTitle: "Aviso",
+    alertNoData:
+      "No se encontraron resultados. Por favor, ingresa los datos otra vez. 🥲",
+    alertAccountTitle: "Cuenta requerida",
+    alertAccountMsg:
+      "¡Regístrate para guardar tu historial de recomendaciones!",
+  },
+};
+
 export default function RecommendResultScreen() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [isReady, setIsReady] = useState(false);
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 설정 언어 및 기존 저장 세션 스캔
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  const t = translations[lang];
 
   useEffect(() => {
     const loadSavedData = async () => {
@@ -42,11 +110,9 @@ export default function RecommendResultScreen() {
           setProducts(JSON.parse(savedData));
           setIsReady(true);
         } else {
-          Alert.alert(
-            "Notice",
-            "No recommendation results found. Please enter your details again. 🥲",
-            [{ text: "OK", onPress: () => router.replace("/recommend") }],
-          );
+          Alert.alert(t.alertNoticeTitle, t.alertNoData, [
+            { text: "OK", onPress: () => router.replace("/recommend") },
+          ]);
         }
       } catch (error) {
         console.error("Failed to load data:", error);
@@ -54,8 +120,10 @@ export default function RecommendResultScreen() {
       }
     };
 
-    loadSavedData();
-  }, []);
+    if (isReady === false) {
+      loadSavedData();
+    }
+  }, [lang]); // 💡 언어가 초기화된 직후 경고창 언어 싱크를 위해 의존성 추가
 
   const handleOpenLink = async (url: string) => {
     if (!url) return;
@@ -66,7 +134,7 @@ export default function RecommendResultScreen() {
   if (!isReady) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading your results...</Text>
+        <Text style={styles.loadingText}>{t.loadingText}</Text>
       </View>
     );
   }
@@ -82,7 +150,7 @@ export default function RecommendResultScreen() {
           <ArrowLeft size={24} color="#334155" />
         </TouchableOpacity>
 
-        <Text style={styles.badgeText}>🎉 Recommended</Text>
+        <Text style={styles.badgeText}>{t.headerBadge}</Text>
 
         <View style={{ width: 24 }} />
       </View>
@@ -94,12 +162,10 @@ export default function RecommendResultScreen() {
         {/* 상단 타이틀 */}
         <View style={styles.welcomeSection}>
           <Text style={styles.mainTitle}>
-            🤖 AI's <Text style={styles.highlightText}>Top Picks</Text>
+            {t.mainTitle}
+            <Text style={styles.highlightText}>{t.mainTitleHighlight}</Text>
           </Text>
-          <Text style={styles.subTitle}>
-            Here are the perfect gifts analyzed{"\n"}based on the details you
-            provided.
-          </Text>
+          <Text style={styles.subTitle}>{t.subTitle}</Text>
         </View>
 
         {/* 결과 리스트 렌더링 */}
@@ -125,7 +191,7 @@ export default function RecommendResultScreen() {
                   </Text>
                   <Text style={styles.productPrice}>
                     {item.product_price === 0
-                      ? "Price Varies"
+                      ? t.priceVaries
                       : `$${item.product_price.toLocaleString("en-US")}`}
                   </Text>
                 </View>
@@ -133,7 +199,7 @@ export default function RecommendResultScreen() {
 
               {/* AI 추천 이유 */}
               <View style={styles.reasonBox}>
-                <Text style={styles.reasonTitle}>🤖 WHY AI RECOMMENDS</Text>
+                <Text style={styles.reasonTitle}>{t.whyAiLabel}</Text>
                 <Text style={styles.reasonText}>
                   {item.recommendation_reason}
                 </Text>
@@ -144,10 +210,10 @@ export default function RecommendResultScreen() {
                 style={styles.buyButton}
                 onPress={() => handleOpenLink(item.product_url)}
               >
-                <Text style={styles.buyButtonText}>🎁 Buy on Amazon ➔</Text>
+                <Text style={styles.buyButtonText}>{t.buyBtn}</Text>
               </TouchableOpacity>
 
-              {/* 공식 어소시에이트 공시 구문 반영 */}
+              {/* 공식 어소시에이트 공시 구문 반영 (법적 리스크 방지를 위해 영문 순정 유지 🇺🇸) */}
               <Text style={styles.partnersText}>
                 As an Amazon Associate, we earn a small commission from
                 qualifying purchases at no extra cost to you.
@@ -156,15 +222,13 @@ export default function RecommendResultScreen() {
           ))}
         </View>
 
+        {/* 가입 유도 버튼 */}
         <TouchableOpacity
           style={styles.saveSoftButton}
           activeOpacity={0.7}
           onPress={() => {
             router.replace("/login");
-            Alert.alert(
-              "Account Required",
-              "Sign up to save your gift recommendation history!",
-            );
+            Alert.alert(t.alertAccountTitle, t.alertAccountMsg);
           }}
         >
           <BookmarkCheck
@@ -172,7 +236,7 @@ export default function RecommendResultScreen() {
             size={20}
             style={{ marginRight: 6 }}
           />
-          <Text style={styles.saveSoftButtonText}>Save These Gift Picks</Text>
+          <Text style={styles.saveSoftButtonText}>{t.saveBtn}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -199,19 +263,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: "700", color: "#334155" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   welcomeSection: { alignItems: "center", marginTop: 16, marginBottom: 12 },
-  badge: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#FFE4E6",
-    shadowColor: "#F43F5E",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
   badgeText: { fontSize: 16, fontWeight: "700", color: "#FF7096" },
   mainTitle: {
     fontSize: 24,
@@ -303,19 +354,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     fontWeight: Platform.OS === "ios" ? "500" : "400",
-  },
-  homeButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    paddingVertical: 12,
-  },
-  homeButtonText: {
-    fontSize: Platform.OS === "ios" ? 15 : 14,
-    color: "#FF7096",
-    fontWeight: Platform.OS === "ios" ? "700" : "600",
-    borderBottomWidth: 1.2,
-    borderBottomColor: "#FF7096",
   },
   highlightText: { color: "#FF7096" },
   saveSoftButton: {

@@ -3,15 +3,14 @@ from typing import List, Optional
 import os
 from dotenv import load_dotenv
 from schemas import RecommendRequest, RecommendResponse, RecommendListResponse
-from openai import OpenAI
 from fastapi.middleware.cors import CORSMiddleware
-
+from openai import AsyncOpenAI
 
 load_dotenv()
 
 app = FastAPI(title="선물 추천 AI 엔진")
 
-client = OpenAI()
+client = AsyncOpenAI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -72,7 +71,7 @@ async def get_recommendation(request: RecommendRequest):
             Verify and recommend exactly 3 best-matching products that strictly satisfy the budget.
         """
 
-        response = client.beta.chat.completions.parse(
+        response = await client.beta.chat.completions.parse(
             model="gpt-4o-mini",
             temperature=0.8,
             messages=[

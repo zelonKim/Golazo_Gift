@@ -1,8 +1,11 @@
+"use client";
 import { client } from "@/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { router, useFocusEffect } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { Calendar, ChevronRight, Gift, NotepadText } from "lucide-react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,15 +21,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
-// 백엔드 Event 모델과 매핑되는 인터페이스 정의
 interface GiftEvent {
   id: number;
   purpose: string;
-  purpose_display: string; // Django choices의 영문 라벨 (예: "Friend's BDay")
+  purpose_display: string;
   min_budget: number;
   max_budget: number;
   created_at: string;
-  recipient_name: string; // 수령인 이름
+  recipient_name: string;
 }
 
 // 🎯 보내주신 PURPOSE_LIST와 100% 매칭시킨 이모지 딕셔너리
@@ -36,6 +38,7 @@ const PURPOSE_EMOJIS: Record<string, string> = {
   PARENTS_BDAY: "💐",
   COUPLE_ANNIV: "👩‍❤️‍👨",
   WED_ANNIV: "💍",
+  REYES_MAGOS: "👑", // 👑 성진님의 초특급 동방박사 세련된 연동 추가!
   GRADUATE: "🎓",
   EMPLOY: "💼",
   HOUSEWARMING: "🏠",
@@ -52,8 +55,97 @@ const PURPOSE_EMOJIS: Record<string, string> = {
   SELF_GIFT: "🎁",
 };
 
+// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: "Gift History",
+    loadingText: "Loading your history...",
+    totalMinLabel: "Total Min Budget",
+    totalMaxLabel: "Total Max Budget",
+    sectionTitle: "Past Events",
+    budgetRangeLabel: "Budget Range",
+    viewGiftsBtn: "View Gifts",
+    emptyText: "No recommendation history yet.",
+    dateNotSet: "Date not set",
+
+    // 삭제 컨펌 알림창
+    deleteTitle: "⚠️ Delete History",
+    deleteConfirmMsg: "Are you sure you want to delete the gift history for ",
+    cancelBtn: "Cancel",
+    deleteBtn: "Delete",
+    errorTitle: "Error 😢",
+    deleteErrorMsg: "Something went wrong while deleting this history.",
+  },
+  es: {
+    headerTitle: "Historial de regalos", // 💡 Gift History 매핑
+    loadingText: "Cargando tu historial...",
+    totalMinLabel: "Presupuesto mín. total", // 💡 가로폭 붕괴 방지를 위한 'mín.' 약어 적용
+    totalMaxLabel: "Presupuesto máx. total",
+    sectionTitle: "Eventos pasados",
+    budgetRangeLabel: "Rango de presupuesto",
+    viewGiftsBtn: "Ver regalos", // 💡 깔끔하고 확실한 행동유도(CTA) 표현
+    emptyText: "Aún no tienes historial de recomendaciones.",
+    dateNotSet: "Sin fecha definida",
+
+    // 삭제 컨펌 알림창
+    deleteTitle: "⚠️ Eliminar historial",
+    deleteConfirmMsg: "¿De verdad quieres eliminar el historial de regalos de ",
+    cancelBtn: "Cancelar",
+    deleteBtn: "Eliminar",
+    errorTitle: "Error 😢",
+    deleteErrorMsg: "Ocurrió un error al intentar eliminar este historial.",
+  },
+};
+
+// 🎯 백엔드 purpose 코드를 다국어 라벨로 즉시 치환해 줄 매직 딕셔너리!
+const PURPOSE_TRANSLATIONS: Record<string, { en: string; es: string }> = {
+  FRIEND_BDAY: { en: "Friend's BDay", es: "Cumple \n de amigo" },
+  LOVER_BDAY: { en: "Partner's BDay", es: "Cumple \n de mi pareja" },
+  PARENTS_BDAY: { en: "Parents' BDay", es: "Cumple \n de papás" },
+  COUPLE_ANNIV: { en: "Couple Anniv", es: "Aniv. \n de novios" },
+  WED_ANNIV: { en: "Wedding Anniv", es: "Aniv. \n de bodas" },
+  REYES_MAGOS: { en: "Three Kings", es: "Día de Reyes" }, // 👑 성진님의 잭팟 치트키!
+  GRADUATE: { en: "Graduation", es: "Graduación" },
+  EMPLOY: { en: "New Job", es: "Nuevo \n trabajo" },
+  HOUSEWARMING: { en: "Housewarming", es: "Estrenar \n casa" },
+  WEDDING: { en: "Wedding", es: "Boda" },
+  BRIDAL_SHOWER: { en: "Bridal Shower", es: "Despedida" },
+  BABY_SHOWER: { en: "Baby Shower", es: "Baby Shower" },
+  BIRTH: { en: "New Baby", es: "Nacimiento" },
+  CHRISTMAS: { en: "Christmas", es: "Navidad" },
+  VALENTINE: { en: "Valentine's", es: "San Valentín" },
+  MOTHERS_DAY: { en: "Mother's Day", es: "Día de la Madre" },
+  FATHERS_DAY: { en: "Father's Day", es: "Día del Padre" },
+  THANK_YOU: { en: "Thank You", es: "Dar gracias" },
+  GET_WELL: { en: "Get Well", es: "Recuperación" },
+  SELF_GIFT: { en: "For Me", es: "Para mí" },
+};
+
 export default function HistoryScreen() {
   const queryClient = useQueryClient();
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  const t = translations[lang];
 
   // 🔍 1. useQuery: 내 프로필 정보 및 중첩 지인 데이터 가져오기
   const { data: userProfile, isLoading } = useQuery({
@@ -86,10 +178,7 @@ export default function HistoryScreen() {
         "Failed to delete recommendation history:",
         error.response?.data || error.message,
       );
-      Alert.alert(
-        "Error 🥲",
-        "Something went wrong while deleting this history.",
-      );
+      Alert.alert(t.errorTitle, t.deleteErrorMsg);
     },
   });
 
@@ -128,18 +217,14 @@ export default function HistoryScreen() {
 
   // 🗑️ 꾹 눌렀을 때 띄워줄 실수 방지용 삭제 컨펌 알림창
   const handleLongPress = (eventId: number, name: string) => {
-    Alert.alert(
-      "⚠️ Delete History",
-      `Are you sure you want to delete the gift history for ${name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteEventMutation.mutate(eventId),
-        },
-      ],
-    );
+    Alert.alert(t.deleteTitle, `${t.deleteConfirmMsg}${name}?`, [
+      { text: t.cancelBtn, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteEventMutation.mutate(eventId),
+      },
+    ]);
   };
 
   return (
@@ -149,13 +234,13 @@ export default function HistoryScreen() {
     >
       {/* 1. 상단 타이틀 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Gift History</Text>
+        <Text style={styles.headerTitle}>{t.headerTitle}</Text>
       </View>
 
       {isLoading ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
-          <Text style={styles.loadingText}>Loading your history...</Text>
+          <Text style={styles.loadingText}>{t.loadingText}</Text>
         </View>
       ) : (
         <ScrollView
@@ -172,7 +257,7 @@ export default function HistoryScreen() {
               <Text style={styles.summaryCount}>
                 {formatSummaryPrice(totalMinBudget)}
               </Text>
-              <Text style={styles.summaryLabel}>Total Min Budget</Text>
+              <Text style={styles.summaryLabel}>{t.totalMinLabel}</Text>
             </View>
 
             <View style={styles.dividerLine} />
@@ -185,7 +270,7 @@ export default function HistoryScreen() {
               <Text style={styles.summaryCount}>
                 {formatSummaryPrice(totalMaxBudget)}
               </Text>
-              <Text style={styles.summaryLabel}>Total Max Budget</Text>
+              <Text style={styles.summaryLabel}>{t.totalMaxLabel}</Text>
             </View>
           </View>
 
@@ -195,17 +280,20 @@ export default function HistoryScreen() {
               <View style={{ marginTop: Platform.OS === "android" ? 5 : 1 }}>
                 <NotepadText size={23} color={"#FF7096"} />
               </View>
-              <Text style={styles.sectionTitle}>Past Events</Text>
+              <Text style={styles.sectionTitle}>{t.sectionTitle}</Text>
             </View>
             {events.length > 0 ? (
               events.map((item) => {
                 const displayDate = item.created_at
-                  ? new Date(item.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "Date not set";
+                  ? new Date(item.created_at).toLocaleDateString(
+                      lang === "es" ? "es-US" : "en-US", // 💡 현지 언어 모드에 어울리는 달력 날짜 순서 포맷 자동 연동!
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      },
+                    )
+                  : t.dateNotSet;
 
                 // 💡 전달해주신 PURPOSE_LIST 기준 키값에 맞춰 이모지가 유연하게 들어갑니다!
                 const emoji = PURPOSE_EMOJIS[item.purpose] || "💝";
@@ -237,7 +325,10 @@ export default function HistoryScreen() {
                           style={{ marginRight: 4 }}
                         />
                         <Text style={styles.successText}>
-                          {item.purpose_display}
+                          <Text style={styles.successText}>
+                            {PURPOSE_TRANSLATIONS[item.purpose]?.[lang] ||
+                              item.purpose_display}
+                          </Text>
                         </Text>
                       </View>
                     </View>
@@ -256,14 +347,16 @@ export default function HistoryScreen() {
                       }}
                     >
                       <View>
-                        <Text style={styles.giftLabel}>Budget Range</Text>
+                        <Text style={styles.giftLabel}>
+                          {t.budgetRangeLabel}
+                        </Text>
                         <Text style={styles.giftNameText}>
                           {formatSummaryPrice(item.min_budget)} ~{" "}
                           {formatSummaryPrice(item.max_budget)}
                         </Text>
                       </View>
                       <View style={styles.priceContainer}>
-                        <Text style={styles.priceText}>View Gifts</Text>
+                        <Text style={styles.priceText}>{t.viewGiftsBtn}</Text>
                         <ChevronRight
                           size={14}
                           color="#FF7096"
@@ -281,9 +374,7 @@ export default function HistoryScreen() {
                   color="#E5E5EA"
                   style={{ marginBottom: 10 }}
                 />
-                <Text style={styles.emptyText}>
-                  No recommendation history yet.
-                </Text>
+                <Text style={styles.emptyText}>{t.emptyText}</Text>
               </View>
             )}
           </View>
@@ -293,7 +384,6 @@ export default function HistoryScreen() {
   );
 }
 
-// 스타일 시트는 기존 파일과 완전히 동일합니다. (생략)
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
@@ -348,6 +438,8 @@ const styles = StyleSheet.create({
     color: "#757580",
     marginTop: 4,
     fontWeight: "600",
+    textAlign: "center", // 💡 영문/스페인어 텍스트 길어질 때 가운데 정렬 방어
+    paddingHorizontal: 4,
   },
   dividerLine: { width: 1.5, height: "60%", backgroundColor: "#F6F6FA" },
   sectionContainer: { marginTop: 4 },

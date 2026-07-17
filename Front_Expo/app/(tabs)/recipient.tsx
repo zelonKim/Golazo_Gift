@@ -1,6 +1,9 @@
+"use client";
 import { client } from "@/api/client";
 import { useTheme } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
+import * as SecureStore from "expo-secure-store";
 import { Edit2, Plus, Trash2, User, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -34,6 +37,115 @@ interface Recipient {
   notes?: string | null;
 }
 
+// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: "My People",
+    loadingText: "Loading friends...",
+    noPeople: "No People added yet.",
+    noPeopleSub: "Tap the [+] button in the top right \nto add someone.",
+    hobbiesLabel: "Hobbies",
+    notesLabel: "Notes",
+
+    // 모달 타이틀 & 입력 라벨
+    editTitle: "Edit Information",
+    addTitle: "Add Friend",
+    nameLabel: "👋 Name / Nickname",
+    namePlaceholder: "e.g. Mom, Boyfriend, Alex",
+    genderLabel: "🧬 Gender",
+    genderM: "👨 Male",
+    genderF: "👩 Female",
+    genderN: "🌈 Non-binary",
+    genderP: "🧸 Private",
+    ageLabel: "🎂 Age Group",
+    hobbiesInputLabel: "🎨 Hobbies / Interests (Optional)",
+    hobbiesPlaceholder: "e.g. Reading, Hiking, Cooking",
+    notesInputLabel: "⭐️ Notes / Preferences (Optional)",
+    notesPlaceholder: "e.g. Dislikes strong perfumes, owns a cat",
+    saveBtn: "Save Changes",
+    addBtn: "Add Friend",
+
+    // 성별 / 나이대 UI 노출용 단어
+    genderMaleShort: "Male",
+    genderFemaleShort: "Female",
+    genderNonbinaryShort: "Non-binary",
+    genderPrivateShort: "Private",
+    ageUnder10: "Under 10",
+    ageOver80: "80s+",
+
+    // 시스템 팝업 및 가이드
+    requiredTitle: "Required",
+    requiredNameMsg: "Please enter a name.",
+    requiredGenderMsg: "Please select a gender preference.",
+    requiredAgeMsg: "Please select an age group.",
+    successTitle: "Success",
+    addSuccessMsg: "Friend added successfully.",
+    saveSuccessTitle: "Saved",
+    saveSuccessMsg: "Information updated successfully.",
+    deleteTitle: "Delete Friend",
+    deleteConfirm: 'Are you sure you want to delete "{content}"?',
+    deleteCancel: "Cancel",
+    deleteBtn: "Delete",
+    deleteSuccessTitle: "Deleted 🌊",
+    deleteSuccessMsg: "Friend removed from your list.",
+    failTitle: "Failed",
+    failMsg: "Please check your information and try again.",
+  },
+  es: {
+    headerTitle: "Mis seres queridos", // 💡 'My People'을 가독성 높고 애정 어린 단어로 번역
+    loadingText: "Cargando lista...",
+    noPeople: "Aún no has agregado a nadie.",
+    noPeopleSub:
+      "Toca el botón [+] en la esquina superior\nderecha para agregar a alguien.",
+    hobbiesLabel: "Hobbies",
+    notesLabel: "Notas",
+
+    // 모달 타이틀 & 입력 라벨
+    editTitle: "Editar información",
+    addTitle: "Agregar amigo",
+    nameLabel: "👋 Nombre / Apodo",
+    namePlaceholder: "Ej. Mamá, Novio, Alex", // 💡 히스패닉 감성 맞춤 예시
+    genderLabel: "🧬 Género",
+    genderM: "👨 Hombre",
+    genderF: "👩 Mujer",
+    genderN: "🌈 No binario",
+    genderP: "🧸 Privado",
+    ageLabel: "🎂 Grupo de edad",
+    hobbiesInputLabel: "🎨 Hobbies / Intereses (Opcional)",
+    hobbiesPlaceholder: "Ej. Lectura, Senderismo, Cocina",
+    notesInputLabel: "⭐️ Notas / Preferencias (Opcional)",
+    notesPlaceholder: "Ej. No le gustan los perfumes fuertes, tiene un gato",
+    saveBtn: "Guardar cambios",
+    addBtn: "Agregar amigo",
+
+    // 성별 / 나이대 UI 노출용 단어
+    genderMaleShort: "Hombre",
+    genderFemaleShort: "Mujer",
+    genderNonbinaryShort: "No binario",
+    genderPrivateShort: "Privado",
+    ageUnder10: "Menor de 10",
+    ageOver80: "80 o más",
+
+    // 시스템 팝업 및 가이드
+    requiredTitle: "Obligatorio",
+    requiredNameMsg: "Por favor, ingresa un nombre.",
+    requiredGenderMsg: "Por favor, selecciona un género.",
+    requiredAgeMsg: "Por favor, selecciona un grupo de edad.",
+    successTitle: "Éxito",
+    addSuccessMsg: "Agregado con éxito a tu lista.",
+    saveSuccessTitle: "Guardado",
+    saveSuccessMsg: "Información actualizada con éxito.",
+    deleteTitle: "Eliminar amigo",
+    deleteConfirm: '¿Estás seguro de que quieres eliminar a "{content}"?',
+    deleteCancel: "Cancelar",
+    deleteBtn: "Eliminar",
+    deleteSuccessTitle: "Eliminado 🌊",
+    deleteSuccessMsg: "Eliminado con éxito de tu lista.",
+    failTitle: "Error",
+    failMsg: "Por favor, comprueba tus datos e inténtalo de nuevo.",
+  },
+};
+
 export default function RecipientScreen() {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
@@ -56,6 +168,42 @@ export default function RecipientScreen() {
   const [mbtiSN, setMbtiSN] = useState<"S" | "N" | null>(null);
   const [mbtiTF, setMbtiTF] = useState<"T" | "F" | null>(null);
   const [mbtiJP, setMbtiJP] = useState<"J" | "P" | null>(null);
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, [isFormModalVisible]);
+
+  // 현재 언어셋 활성화
+  const t = translations[lang];
+
+  const ageGroups = [
+    t.ageUnder10,
+    "10s",
+    "20s",
+    "30s",
+    "40s",
+    "50s",
+    "60s",
+    "70s",
+    t.ageOver80,
+  ];
 
   // 수정 모드 진입 시 기존 MBTI 문자열을 파싱하여 상태에 반영
   useEffect(() => {
@@ -111,12 +259,12 @@ export default function RecipientScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert("Success", "Friend added successfully.");
+      Alert.alert(t.successTitle, t.addSuccessMsg);
       closeFormModal();
     },
     onError: (error: any) => {
       console.log("서버 에러:", error.response?.data);
-      Alert.alert("Failed", "Please check your information and try again.");
+      Alert.alert(t.failTitle, t.failMsg);
     },
   });
 
@@ -133,7 +281,7 @@ export default function RecipientScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert("Saved", "Information updated successfully.");
+      Alert.alert(t.saveSuccessTitle, t.saveSuccessMsg);
       closeFormModal();
     },
   });
@@ -145,7 +293,7 @@ export default function RecipientScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert("Deleted 🌊", "Friend removed from your list.");
+      Alert.alert(t.deleteSuccessTitle, t.deleteSuccessMsg);
     },
   });
 
@@ -157,9 +305,9 @@ export default function RecipientScreen() {
 
     let uiAgeGroup = "20s";
     if (recipient.age_group === "0") {
-      uiAgeGroup = "Under 10";
+      uiAgeGroup = t.ageUnder10;
     } else if (recipient.age_group === "80") {
-      uiAgeGroup = "80s+";
+      uiAgeGroup = t.ageOver80;
     } else if (recipient.age_group) {
       uiAgeGroup = `${recipient.age_group}s`;
     }
@@ -188,17 +336,17 @@ export default function RecipientScreen() {
   // 💾 최종 저장 버튼 핸들러
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert("Required", "Please enter a name.");
+      Alert.alert(t.requiredTitle, t.requiredNameMsg);
       return;
     }
 
     if (!gender) {
-      Alert.alert("Required", "Please select a gender preference.");
+      Alert.alert(t.requiredTitle, t.requiredGenderMsg);
       return;
     }
 
     if (!ageGroup) {
-      Alert.alert("Required", "Please select an age group.");
+      Alert.alert(t.requiredTitle, t.requiredAgeMsg);
       return;
     }
 
@@ -210,8 +358,10 @@ export default function RecipientScreen() {
 
     let convertedAgeGroup; // 기본값 지정
 
-    if (ageGroup === "Under 10") convertedAgeGroup = "0";
-    else if (ageGroup === "80s+") convertedAgeGroup = "80";
+    if (ageGroup === t.ageUnder10 || ageGroup === "Under 10")
+      convertedAgeGroup = "0";
+    else if (ageGroup === t.ageOver80 || ageGroup === "80s+")
+      convertedAgeGroup = "80";
     else {
       // "20s" 에서 "s"를 제거하고 숫자 "20"만 추출
       convertedAgeGroup = ageGroup.replace("s", "");
@@ -239,12 +389,12 @@ export default function RecipientScreen() {
   // 🗑️ 삭제 컨펌 얼럿 핸들러
   const handleDeleteCheck = (id: number, targetName: string) => {
     Alert.alert(
-      "Delete Friend",
-      `Are you sure you want to delete "${targetName}"?`,
+      t.deleteTitle,
+      t.deleteConfirm.replace("{content}", targetName),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.deleteCancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.deleteBtn,
           style: "destructive",
           onPress: () => deleteRecipientMutation.mutate(id),
         },
@@ -262,23 +412,11 @@ export default function RecipientScreen() {
 
   // 🧬 리스트 화면에 노출될 성별 텍스트 매핑
   const getGenderLabel = (g: string) => {
-    if (g === "M") return "Male";
-    if (g === "F") return "Female";
-    if (g === "N") return "Non-binary";
-    return "Private"; // Prefer not to say는 UI 텍스트 길이상 심플하게 표현
+    if (g === "M") return t.genderMaleShort;
+    if (g === "F") return t.genderFemaleShort;
+    if (g === "N") return t.genderNonbinaryShort;
+    return t.genderPrivateShort;
   };
-
-  const ageGroups = [
-    "Under 10",
-    "10s",
-    "20s",
-    "30s",
-    "40s",
-    "50s",
-    "60s",
-    "70s",
-    "80s+",
-  ];
 
   return (
     <SafeAreaView
@@ -287,7 +425,7 @@ export default function RecipientScreen() {
     >
       {/* 1. 상단 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.logoText}>My People</Text>
+        <Text style={styles.logoText}>{t.headerTitle}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setIsFormModalVisible(true)}
@@ -300,7 +438,7 @@ export default function RecipientScreen() {
       {isLoading ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
-          <Text style={styles.loadingText}>Loading friends...</Text>
+          <Text style={styles.loadingText}>{t.loadingText}</Text>
         </View>
       ) : (
         <ScrollView
@@ -309,11 +447,11 @@ export default function RecipientScreen() {
         >
           {recipients.length > 0 ? (
             recipients.map((item) => {
-              let displayAge = "20s"; // 혹시 모를 예외 대비 기본값
+              let displayAge = "20s"; // 혹은 모를 예외 대비 기본값
               if (item.age_group === "0") {
-                displayAge = "Under 10";
+                displayAge = t.ageUnder10;
               } else if (item.age_group === "80") {
-                displayAge = "80s+";
+                displayAge = t.ageOver80;
               } else if (item.age_group) {
                 displayAge = `${item.age_group}s`;
               }
@@ -350,13 +488,16 @@ export default function RecipientScreen() {
                     </View>
                   </View>
 
-                  {/* 취미 및 특이사항 조건부 노출 */}
+                  {/* 취미 및 특사항 조건부 노출 */}
                   {(item.hobbies || item.notes) && (
                     <>
                       <View style={styles.cardDivider} />
                       {item.hobbies && (
                         <Text style={styles.subInfoText} numberOfLines={1}>
-                          🎨 <Text style={{ fontWeight: "700" }}>Hobbies:</Text>{" "}
+                          🎨{" "}
+                          <Text style={{ fontWeight: "700" }}>
+                            {t.hobbiesLabel}:
+                          </Text>{" "}
                           {item.hobbies}
                         </Text>
                       )}
@@ -365,7 +506,10 @@ export default function RecipientScreen() {
                           style={[styles.subInfoText, { marginTop: 4 }]}
                           numberOfLines={2}
                         >
-                          ⭐️ <Text style={{ fontWeight: "700" }}>Notes:</Text>{" "}
+                          ⭐️{" "}
+                          <Text style={{ fontWeight: "700" }}>
+                            {t.notesLabel}:
+                          </Text>{" "}
                           {item.notes}
                         </Text>
                       )}
@@ -378,10 +522,10 @@ export default function RecipientScreen() {
             <View style={styles.emptyContainer}>
               <User size={42} color="#d1d1d3" />
               <Text style={[styles.emptyText, { fontSize: 17 }]}>
-                No People added yet.
+                {t.noPeople}
               </Text>
               <Text style={[styles.emptyText, { marginTop: -10 }]}>
-                {"\n"}Tap the [+] button in the top right {"\n"}to add someone.
+                {t.noPeopleSub}
               </Text>
             </View>
           )}
@@ -396,7 +540,6 @@ export default function RecipientScreen() {
         onRequestClose={closeFormModal}
       >
         {/* <KeyboardAvoidingView
-          // 🌟 [수정 2] iOS는 padding, 안드로이드는 네이티브 매커니즘(height 또는 생략) 분기 슛!
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
           keyboardVerticalOffset={-30}
@@ -410,7 +553,7 @@ export default function RecipientScreen() {
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalHeaderTitle}>
-                    {editingRecipient ? "Edit Information" : "Add Friend"}
+                    {editingRecipient ? t.editTitle : t.addTitle}
                   </Text>
                   <TouchableOpacity onPress={closeFormModal}>
                     <X size={20} color="#AEAEB2" />
@@ -418,19 +561,19 @@ export default function RecipientScreen() {
                 </View>
 
                 {/* 필드 1: 이름 */}
-                <Text style={styles.inputLabel}>👋 Name / Nickname</Text>
+                <Text style={styles.inputLabel}>{t.nameLabel}</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. Mom, Boyfriend, Alex"
+                    placeholder={t.namePlaceholder}
                     placeholderTextColor="#AEAEB2"
                     value={name}
                     onChangeText={setName}
                   />
                 </View>
 
-                {/* 필드 2: 성별 (백엔드 4개 스펙에 부합하도록 Grid 2x2 반응형 확장 대응 권장) */}
-                <Text style={styles.inputLabel}>🧬 Gender</Text>
+                {/* 필드 2: 성별 */}
+                <Text style={styles.inputLabel}>{t.genderLabel}</Text>
                 <View style={[styles.gridContainer, { marginBottom: 16 }]}>
                   <TouchableOpacity
                     style={[
@@ -446,7 +589,7 @@ export default function RecipientScreen() {
                         gender === "M" && { color: "white" },
                       ]}
                     >
-                      👨 Male
+                      {t.genderM}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -463,7 +606,7 @@ export default function RecipientScreen() {
                         gender === "F" && { color: "white" },
                       ]}
                     >
-                      👩 Female
+                      {t.genderF}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -480,7 +623,7 @@ export default function RecipientScreen() {
                         gender === "N" && { color: "white" },
                       ]}
                     >
-                      🌈 Non-binary
+                      {t.genderN}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -497,13 +640,13 @@ export default function RecipientScreen() {
                         gender === "P" && { color: "white" },
                       ]}
                     >
-                      🧸 Private
+                      {t.genderP}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* 필드 3: 나이대 */}
-                <Text style={styles.inputLabel}>🎂 Age Group</Text>
+                <Text style={styles.inputLabel}>{t.ageLabel}</Text>
                 <View style={styles.gridContainer}>
                   {ageGroups.map((age) => (
                     <TouchableOpacity
@@ -528,12 +671,12 @@ export default function RecipientScreen() {
 
                 {/* 필드 5: 취미 */}
                 <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                  🎨 Hobbies / Interests (Optional)
+                  {t.hobbiesInputLabel}
                 </Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. Reading, Hiking, Cooking"
+                    placeholder={t.hobbiesPlaceholder}
                     placeholderTextColor="#AEAEB2"
                     value={hobbies}
                     onChangeText={setHobbies}
@@ -541,9 +684,7 @@ export default function RecipientScreen() {
                 </View>
 
                 {/* 필드 6: 특이사항 */}
-                <Text style={styles.inputLabel}>
-                  ⭐️ Notes / Preferences (Optional)
-                </Text>
+                <Text style={styles.inputLabel}>{t.notesInputLabel}</Text>
                 <View
                   style={[
                     styles.inputWrapper,
@@ -552,7 +693,7 @@ export default function RecipientScreen() {
                 >
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. Dislikes strong perfumes, owns a cat"
+                    placeholder={t.notesPlaceholder}
                     placeholderTextColor="#AEAEB2"
                     multiline
                     numberOfLines={3}
@@ -567,7 +708,7 @@ export default function RecipientScreen() {
                   onPress={handleSave}
                 >
                   <Text style={styles.modalSubmitButtonText}>
-                    {editingRecipient ? "Save Changes" : "Add Friend"}
+                    {editingRecipient ? t.saveBtn : t.addBtn}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -734,7 +875,7 @@ const styles = StyleSheet.create({
   choiceBadgeSelected: { backgroundColor: "#FF7096", borderColor: "#FF7096" },
   choiceBadgeText: { fontSize: 13, fontWeight: "700", color: "#FF7096" },
 
-  /* 🆕 나이대 Grid 레이아웃 (3열 배치) */
+  /* 나이대 Grid 레이아웃 (3열 배치) */
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -742,7 +883,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   gridBadge: {
-    width: "31%", // 3열 배치 목적
+    width: "32%", // 3열 배치 목적
     backgroundColor: "#FFF0F3",
     paddingVertical: 10,
     borderRadius: 12,
@@ -758,7 +899,7 @@ const styles = StyleSheet.create({
     color: "#FF7096",
   },
 
-  /* 🆕 MBTI 조합 선택 UI 레이아웃 */
+  /* MBTI 조합 선택 UI 레이아웃 */
   mbtiContainer: {
     flexDirection: "row",
     justifyContent: "space-between",

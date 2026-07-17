@@ -1,7 +1,9 @@
+"use client";
 import { client } from "@/api/client";
 import { useTheme } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
+import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -14,7 +16,7 @@ import {
   UserX,
   X,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +45,106 @@ interface UserProfile {
   recipients?: any[];
 }
 
+// 🎯 미국 내 히스패닉 맞춤형 마이페이지 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: "My Profile",
+    welcomeTag: "Welcome 👋",
+    defaultNickname: "Set your nickname",
+    statPerson: "person",
+    statPeople: "people",
+    statEvent: "event",
+    statEvents: "events",
+    statLovedOnes: "Loved Ones",
+    statEventsSaved: "Events Saved",
+
+    // 설정 목록
+    sectionSettings: "Settings",
+    menuNicknameTitle: "Set & Edit Nickname",
+    menuNicknameSub: "Update the name shown in the app",
+    menuLogoutTitle: "Log Out",
+    menuLogoutSub: "Sign out of your account",
+    menuPrivacyTitle: "Privacy Policy",
+    menuPrivacySub: "Read about how we protect your info",
+    menuDeleteTitle: "Delete Account",
+    menuDeleteSub: "Permanently delete account",
+
+    // 모달 및 입력창
+    newNicknameLabel: "New Nickname",
+    placeholderNickname: "Enter your nickname",
+    saveChangesBtn: "Save Changes",
+
+    // 알림창 멘트
+    noticeTitle: "Notice",
+    enterNicknameAlert: "Please enter your nickname!",
+    successTitle: "Success 🎉",
+    successMsg: "Your nickname has been updated successfully.",
+    errorTitle: "Error 😢",
+    updateErrorMsg: "Failed to update nickname.",
+
+    logoutTitle: "Log Out",
+    logoutConfirmMsg: "Are you sure you want to log out?",
+    cancelBtn: "Cancel",
+
+    deleteTitle: "⚠️ Delete Account",
+    deleteConfirmMsg:
+      "Are you sure you want to delete your account?\n\nAll registered friends and gift recommendation history will be permanently deleted and cannot be restored.",
+    deleteBtn: "Delete",
+    deleteSuccessTitle: "Account Deleted",
+    deleteSuccessMsg:
+      "We're sad to see you go. Thank you for using our service.",
+    deleteErrorMsg: "Failed to delete account. Please try again.",
+  },
+  es: {
+    headerTitle: "Mi perfil", // 💡 My Profile 매핑
+    welcomeTag: "¡Hola! 👋", // 💡 입에 착 붙는 라틴계 첫인사 적용
+    defaultNickname: "Define tu apodo",
+    statPerson: "persona",
+    statPeople: "personas",
+    statEvent: "evento",
+    statEvents: "eventos",
+    statLovedOnes: "Seres queridos",
+    statEventsSaved: "Eventos guardados",
+
+    // 설정 목록
+    sectionSettings: "Ajustes",
+    menuNicknameTitle: "Modificar apodo", // 💡 가로폭이 터지지 않는 세련되고 컴팩트한 번역
+    menuNicknameSub: "Edita tu nombre de perfil",
+    menuLogoutTitle: "Cerrar sesión",
+    menuLogoutSub: "Salir de tu cuenta en este dispositivo",
+    menuPrivacyTitle: "Política de privacidad",
+    menuPrivacySub: "Cómo cuidamos tu info",
+    menuDeleteTitle: "Eliminar cuenta",
+    menuDeleteSub: "Borrar tu cuenta permanentemente",
+
+    // 모달 및 입력창
+    newNicknameLabel: "Nuevo apodo",
+    placeholderNickname: "Escribe tu apodo",
+    saveChangesBtn: "Guardar cambios",
+
+    // 알림창 멘트
+    noticeTitle: "Aviso",
+    enterNicknameAlert: "¡Por favor, escribe tu apodo!",
+    successTitle: "¡Éxito! 🎉",
+    successMsg: "Tu apodo ha sido actualizado con éxito.",
+    errorTitle: "Error 😢",
+    updateErrorMsg: "No se pudo actualizar el apodo.",
+
+    logoutTitle: "Cerrar sesión",
+    logoutConfirmMsg: "¿De verdad quieres cerrar sesión?",
+    cancelBtn: "Cancelar",
+
+    deleteTitle: "⚠️ Eliminar cuenta",
+    deleteConfirmMsg:
+      "¿De verdad quieres eliminar tu cuenta?\n\nTodos tus amigos registrados e historial de recomendaciones se borrarán permanentemente y no se podrán recuperar.",
+    deleteBtn: "Eliminar",
+    deleteSuccessTitle: "Cuenta eliminada",
+    deleteSuccessMsg:
+      "Nos da pena verte partir. Gracias por usar nuestro servicio.",
+    deleteErrorMsg: "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
+  },
+};
+
 export default function MyPageScreen() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -51,6 +153,29 @@ export default function MyPageScreen() {
   const [isAlarmEnabled, setIsAlarmEnabled] = useState(true);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [inputNickname, setInputNickname] = useState("");
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  const t = translations[lang];
 
   // 🔍 1. useQuery: 내 프로필 정보 실시간 조회 (GET /user/me/)
   const { data: profile, isLoading } = useQuery<UserProfile>({
@@ -69,11 +194,11 @@ export default function MyPageScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      Alert.alert("Success ", "Your nickname has been updated successfully.");
+      Alert.alert(t.successTitle, t.successMsg);
       setIsEditModalVisible(false);
     },
     onError: () => {
-      Alert.alert("Error 🥲", "Failed to update nickname.");
+      Alert.alert(t.errorTitle, t.updateErrorMsg);
     },
   });
 
@@ -84,14 +209,11 @@ export default function MyPageScreen() {
     },
     onSuccess: async () => {
       await SecureStore.deleteItemAsync("userToken");
-      Alert.alert(
-        "Account Deleted",
-        "We're sad to see you go. Thank you for using our service.",
-      );
+      Alert.alert(t.deleteSuccessTitle, t.deleteSuccessMsg);
       router.replace("/login");
     },
     onError: () => {
-      Alert.alert("Error 🥲", "Failed to delete account. Please try again.");
+      Alert.alert(t.errorTitle, t.deleteErrorMsg);
     },
   });
 
@@ -103,17 +225,17 @@ export default function MyPageScreen() {
 
   const handleSaveNickname = () => {
     if (!inputNickname.trim()) {
-      Alert.alert("Notice", "Please enter your nickname!");
+      Alert.alert(t.noticeTitle, t.enterNicknameAlert);
       return;
     }
     updateNicknameMutation.mutate(inputNickname.trim());
   };
 
   const handleLogOut = () => {
-    Alert.alert("Log Out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.logoutTitle, t.logoutConfirmMsg, [
+      { text: t.cancelBtn, style: "cancel" },
       {
-        text: "Log Out",
+        text: t.logoutTitle,
         style: "destructive",
         onPress: async () => {
           await SecureStore.deleteItemAsync("userToken");
@@ -125,18 +247,14 @@ export default function MyPageScreen() {
 
   // ⚠️ 회원 탈퇴 컨펌 얼럿 핸들러
   const handleDeleteAccountCheck = () => {
-    Alert.alert(
-      "⚠️ Delete Account",
-      "Are you sure you want to delete your account?\n\nAll registered friends and gift recommendation history will be permanently deleted and cannot be restored.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteAccountMutation.mutate(),
-        },
-      ],
-    );
+    Alert.alert(t.deleteTitle, t.deleteConfirmMsg, [
+      { text: t.cancelBtn, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteAccountMutation.mutate(),
+      },
+    ]);
   };
 
   // 📊 역참조 데이터 개수 동적 연산
@@ -154,7 +272,7 @@ export default function MyPageScreen() {
   }
 
   // 표시 명칭 분기 가이드라인 반영
-  const displayNickname = profile?.nickname || "Set your nickname";
+  const displayNickname = profile?.nickname || t.defaultNickname;
 
   return (
     <SafeAreaView
@@ -162,7 +280,7 @@ export default function MyPageScreen() {
       edges={["top"]}
     >
       <View style={styles.header}>
-        <Text style={styles.logoText}>My Profile</Text>
+        <Text style={styles.logoText}>{t.headerTitle}</Text>
       </View>
 
       <ScrollView
@@ -175,8 +293,8 @@ export default function MyPageScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatarEmoji}>
                 <Image
-                  source={require("../../assets/images/miniGifty.png")} // 상대 경로 확인 필요!
-                  style={{ width: 69, height: 69 }} // 이미지 크기(가로/세로)를 꼭 명시해줘야 보입니다!
+                  source={require("../../assets/images/miniGifty.png")} // 상대 경로 유지
+                  style={{ width: 69, height: 69 }}
                   resizeMode="contain"
                 />
               </View>
@@ -185,7 +303,7 @@ export default function MyPageScreen() {
               <View style={styles.badgeRow}>
                 <View style={styles.bubbleTag}>
                   <Text style={styles.bubbleTagText} numberOfLines={1}>
-                    Welcome 👋
+                    {t.welcomeTag}
                   </Text>
                 </View>
               </View>
@@ -216,17 +334,18 @@ export default function MyPageScreen() {
                 style={{ marginBottom: 4 }}
               />
               <Text style={styles.statNumber}>
-                {totalRecipients} {totalRecipients === 1 ? "person" : "people"}
+                {totalRecipients}{" "}
+                {totalRecipients === 1 ? t.statPerson : t.statPeople}
               </Text>
-              <Text style={styles.statLabel}>Loved Ones</Text>
+              <Text style={styles.statLabel}>{t.statLovedOnes}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Gift size={16} color="#FFB800" style={{ marginBottom: 4 }} />
               <Text style={styles.statNumber}>
-                {totalEvents} {totalEvents === 1 ? "event" : "events"}
+                {totalEvents} {totalEvents === 1 ? t.statEvent : t.statEvents}
               </Text>
-              <Text style={styles.statLabel}>Events Saved</Text>
+              <Text style={styles.statLabel}>{t.statEventsSaved}</Text>
             </View>
           </View>
         </View>
@@ -235,7 +354,7 @@ export default function MyPageScreen() {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Settings size={22} color={"#FF7096"} />
-            <Text style={styles.sectionTitle}>Settings</Text>
+            <Text style={styles.sectionTitle}>{t.sectionSettings}</Text>
           </View>
 
           {/* 닉네임 변경 터치 시 모달 온 */}
@@ -244,10 +363,12 @@ export default function MyPageScreen() {
               <View style={styles.heartIconBg}>
                 <User size={16} color="#FF7096" />
               </View>
-              <View>
-                <Text style={styles.listItemName}>Set & Edit Nickname</Text>
-                <Text style={styles.listItemSubText}>
-                  Update the name shown in the app
+              <View style={{ flex: 1 }}>
+                <Text style={styles.listItemName} numberOfLines={1}>
+                  {t.menuNicknameTitle}
+                </Text>
+                <Text style={styles.listItemSubText} numberOfLines={1}>
+                  {t.menuNicknameSub}
                 </Text>
               </View>
             </View>
@@ -259,10 +380,12 @@ export default function MyPageScreen() {
               <View style={styles.heartIconBg}>
                 <LogOut size={16} color="#FF7096" />
               </View>
-              <View>
-                <Text style={styles.listItemName}>Log Out</Text>
-                <Text style={styles.listItemSubText}>
-                  Sign out of your account on this device
+              <View style={{ flex: 1 }}>
+                <Text style={styles.listItemName} numberOfLines={1}>
+                  {t.menuLogoutTitle}
+                </Text>
+                <Text style={styles.listItemSubText} numberOfLines={1}>
+                  {t.menuLogoutSub}
                 </Text>
               </View>
             </View>
@@ -277,10 +400,12 @@ export default function MyPageScreen() {
                 <View style={styles.heartIconBg}>
                   <Info size={16} color="#FF7096" />
                 </View>
-                <View>
-                  <Text style={styles.listItemName}>Privacy Policy</Text>
-                  <Text style={styles.listItemSubText}>
-                    Read about how we protect your info
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.listItemName} numberOfLines={1}>
+                    {t.menuPrivacyTitle}
+                  </Text>
+                  <Text style={styles.listItemSubText} numberOfLines={1}>
+                    {t.menuPrivacySub}
                   </Text>
                 </View>
               </View>
@@ -298,12 +423,15 @@ export default function MyPageScreen() {
               >
                 <UserX size={16} color="#FF4D4D" />
               </View>
-              <View>
-                <Text style={[styles.listItemName, { color: "#FF4D4D" }]}>
-                  Delete Account
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[styles.listItemName, { color: "#FF4D4D" }]}
+                  numberOfLines={1}
+                >
+                  {t.menuDeleteTitle}
                 </Text>
-                <Text style={styles.listItemSubText}>
-                  Permanently delete account
+                <Text style={styles.listItemSubText} numberOfLines={1}>
+                  {t.menuDeleteSub}
                 </Text>
               </View>
             </View>
@@ -322,17 +450,19 @@ export default function MyPageScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>Set & Edit Nickname</Text>
+                <Text style={styles.modalHeaderTitle}>
+                  {t.menuNicknameTitle}
+                </Text>
                 <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
                   <X size={20} color="#AEAEB2" />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.inputLabel}>New Nickname</Text>
+              <Text style={styles.inputLabel}>{t.newNicknameLabel}</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Enter your nickname"
+                  placeholder={t.placeholderNickname}
                   placeholderTextColor="#AEAEB2"
                   value={inputNickname}
                   onChangeText={setInputNickname}
@@ -344,7 +474,9 @@ export default function MyPageScreen() {
                 style={styles.modalSubmitButton}
                 onPress={handleSaveNickname}
               >
-                <Text style={styles.modalSubmitButtonText}>Save Changes</Text>
+                <Text style={styles.modalSubmitButtonText}>
+                  {t.saveChangesBtn}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -467,7 +599,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#F6F6FA",
   },
-  listItemLeft: { flexDirection: "row", alignItems: "center" },
+  listItemLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   heartIconBg: { backgroundColor: "#FFF0F3", padding: 10, borderRadius: 50 },
   listItemName: {
     fontSize: 15,

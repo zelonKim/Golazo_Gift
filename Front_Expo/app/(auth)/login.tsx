@@ -1,10 +1,11 @@
+"use client";
 import { client } from "@/api/client";
-// import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useMutation } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Lock, Mail } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -34,11 +35,53 @@ interface SocialLoginData {
   token: string; // 구글은 idToken, 애플은 identityToken
 }
 
+// 🎯 미국 내 히스패닉(US-Spanish) 사용 패턴을 200% 반영한 번역 딕셔너리
+const translations = {
+  en: {
+    subTitle: "Find gifts they'll actually love",
+    emailPlaceholder: "Enter your email",
+    passwordPlaceholder: "Enter your password",
+    loginBtn: "Log In",
+    noAccount: "Don't have an account?",
+    signUp: " Sign Up ",
+    divider: "Or continue with",
+    guestBtn: "Continue as guest",
+    requiredAlert: "Required",
+    requiredAlertMsg: "Please enter both your email and password.",
+    authErrorTitle: "Authentication Error",
+    authErrorMsg: "Failed to process token. Please try again.",
+    loginFailTitle: "Login Failed",
+    loginFailMsg: "Please check your email or password again.",
+    socialFailMsg: "Social authentication failed.",
+  },
+  // 🇺🇸🇲🇽 미국 거주 히스패닉 유저들에게 가장 친숙한 앱 UI 전용 스페인어 셋
+  es: {
+    subTitle: "Le encantó el regalo, ¡fue un golazo!",
+    emailPlaceholder: "Ingresa tu correo electrónico", // 💡 미국식 스페인어 정석 (Introduce 대신 Ingresa)
+    passwordPlaceholder: "Ingresa tu contraseña", // 💡 유저들에게 익숙한 통일감 부여
+    loginBtn: "Iniciar sesión",
+    noAccount: "¿No tienes una cuenta?",
+    signUp: " Crea una cuenta ", // 💡 Sign Up 직관적 치환 (Crea una cuenta)
+    divider: "O continúa con",
+    guestBtn: "Continuar como invitado",
+    requiredAlert: "Obligatorio",
+    requiredAlertMsg: "Por favor, ingresa tu correo y contraseña.", // 💡 안내 문구도 Ingresa로 결 맞춤
+    authErrorTitle: "Error de autenticación",
+    authErrorMsg: "Error al procesar el token. Inténtalo de nuevo.",
+    loginFailTitle: "Error de inicio de sesión",
+    loginFailMsg: "Por favor, comprueba tu correo o contraseña.",
+    socialFailMsg: "Error en la autenticación social.",
+  },
+};
+
 export default function LoginScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
 
   // 1. 구글 SDK 초기화 (앱 실행 시 최초 1회 동작)
   // useEffect(() => {
@@ -51,18 +94,46 @@ export default function LoginScreen() {
   //   });
   // }, []);
 
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
+  useEffect(() => {
+    const initLanguage = async () => {
+      // 💡 혹시 이미 저장된 언어 세팅이 기기에 있는지 먼저 확인
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        // 저장된 게 없다면 스마트폰 시스템 설정 언어 체크 (히스패닉 감지)
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+
+  
+  // 현재 언어셋 매핑
+  const t = translations[lang];
+
   const handleLoginSuccess = async (data: any) => {
     try {
       const accessToken = data.tokens?.access || data.tokens;
       if (accessToken) {
         await SecureStore.setItemAsync("userToken", accessToken);
+        // 🔒 현재 진입한 히스패닉 맞춤 언어 세팅을 기기에 고정 저장!
+        await SecureStore.setItemAsync("userLang", lang);
+
         router.replace("/(tabs)");
       } else {
         throw new Error("발급된 인증 토큰이 존재하지 않습니다.");
       }
     } catch (error) {
       console.error("로그인 토큰 저장 중 에러:", error);
-      Alert.alert("인증 오류", "토큰 처리에 실패했습니다. 다시 시도해 주세요.");
+      Alert.alert(t.authErrorTitle, t.authErrorMsg);
     }
   };
 
@@ -76,9 +147,8 @@ export default function LoginScreen() {
     onError: (error: any) => {
       console.error("로그인 실패 원인:", error.response?.data);
       const serverError = error.response?.data?.error;
-      const errorMsg =
-        serverError || "이메일 혹은 비밀번호를 다시 확인해 주세요.";
-      Alert.alert("로그인 실패", errorMsg);
+      const errorMsg = serverError || t.loginFailMsg;
+      Alert.alert(t.loginFailTitle, errorMsg);
     },
   });
 
@@ -93,13 +163,13 @@ export default function LoginScreen() {
     onSuccess: handleLoginSuccess,
     onError: (error: any) => {
       console.error("소셜 로그인 실패 원인:", error.response?.data);
-      Alert.alert("로그인 실패", "소셜 로그인 인증에 실패했습니다.");
+      Alert.alert(t.loginFailTitle, t.socialFailMsg);
     },
   });
 
   const handleLogin = () => {
     if (!email || !password) {
-      Alert.alert("Required", "Please enter both your email and password.");
+      Alert.alert(t.requiredAlert, t.requiredAlertMsg);
       return;
     }
     loginMutation.mutate({ email, password });
@@ -162,12 +232,9 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.content}>
-          {/* 🪄 1. 상단 인트로 타이틀 */}
+          {/* 상단 인트로 타이틀 */}
           <View style={styles.welcomeSection}>
-            {/* 현지화 적용 */}
-            <Text style={styles.subTitle}>
-              Find gifts they'll actually love
-            </Text>
+            <Text style={styles.subTitle}>{t.subTitle}</Text>
             <Text style={styles.mainTitle}>Golazo Gift</Text>
           </View>
 
@@ -177,7 +244,7 @@ export default function LoginScreen() {
               <Mail size={18} color="#FF7096" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="Enter your email" // 현지화 적용
+                placeholder={t.emailPlaceholder}
                 placeholderTextColor="#AEAEB2"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -190,7 +257,7 @@ export default function LoginScreen() {
               <Lock size={18} color="#FF7096" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="Enter your password" // 현지화 적용
+                placeholder={t.passwordPlaceholder}
                 placeholderTextColor="#AEAEB2"
                 secureTextEntry
                 autoCapitalize="none"
@@ -200,7 +267,7 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* 🚀 3. 로그인 하기 버튼 */}
+          {/* 로그인 하기 버튼 */}
           <TouchableOpacity
             style={[
               styles.cuteButton,
@@ -210,27 +277,26 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loginMutation.isPending || socialLoginMutation.isPending}
           >
-            {loginMutation.isPending ? (
+            {loginMutation.isPending || socialLoginMutation.isPending ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.cuteButtonText}>Log In</Text> // 현지화 적용
+              <Text style={styles.cuteButtonText}>{t.loginBtn}</Text>
             )}
           </TouchableOpacity>
 
           {/* 회원가입 유도 영역 */}
           <View style={styles.signupLink}>
-            <Text style={styles.signupLinkText}>Don't have an account?</Text>
+            <Text style={styles.signupLinkText}>{t.noAccount}</Text>
             <TouchableOpacity onPress={() => router.push("./signup")}>
-              <Text style={styles.signupLinkTextBold}> Sign Up </Text>
+              <Text style={styles.signupLinkTextBold}>{t.signUp}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* 🌟 소셜 로그인 버튼 영역 */}
+          {/* 소셜 로그인 버튼 영역 */}
           <View style={styles.socialSection}>
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              {/* 현지화 적용 */}
+              <Text style={styles.dividerText}>{t.divider}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -261,8 +327,7 @@ export default function LoginScreen() {
               style={styles.guestButton}
               onPress={() => router.replace("/quickRecommend")}
             >
-              <Text style={styles.guestButtonText}>Continue as guest</Text>
-              {/* 현지화 적용 */}
+              <Text style={styles.guestButtonText}>{t.guestBtn}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -271,9 +336,7 @@ export default function LoginScreen() {
   );
 }
 
-// ... 스타일시트 코드는 질문자님의 기존 코드와 동일하므로 생략합니다.
 const styles = StyleSheet.create({
-  // (기존 스타일 코드와 동일)
   container: { flex: 1 },
   content: {
     flex: 1,
@@ -288,10 +351,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   subTitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#FF7096",
     fontWeight: "700",
     marginBottom: 6,
+    textAlign: "center",
   },
   mainTitle: {
     fontSize: 26,
@@ -312,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   inputIcon: { marginRight: 12 },
-  textInput: { flex: 1, fontSize: 15, fontWeight: "600", color: "#2D2D3A" },
+  textInput: { flex: 1, fontSize: 14, fontWeight: "600", color: "#2D2D3A" },
   cuteButton: {
     flexDirection: "row",
     justifyContent: "center",
@@ -337,7 +401,7 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: "#F2F2F7" },
   dividerText: {
-    fontSize: Platform.OS === "ios" ? 14 : 13,
+    fontSize: Platform.OS === "ios" ? 13 : 12,
     color: "#AEAEB2",
     paddingHorizontal: 12,
     fontWeight: Platform.OS === "ios" ? "600" : "500",
@@ -365,7 +429,5 @@ const styles = StyleSheet.create({
     color: "#AEAEB2",
     borderBottomWidth: 0.9,
     borderBottomColor: "#AEAEB2",
-
-    // paddingBottom: Platform.OS === "ios" ? 0.1 : 0.1,
   },
 });

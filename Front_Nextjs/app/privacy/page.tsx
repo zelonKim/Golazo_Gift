@@ -1,8 +1,64 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+// 🎯 제목과 계정 삭제 가이드라인만 사용자 감성에 맞게 스페인어 스위칭!
+const translations = {
+  en: {
+    backBtn: "Go to Home",
+    pageTitle: "Golazo Privacy Policy",
+    effectiveDate: "Effective Date: July 10, 2026",
+
+    // 계정 삭제 공지 배너
+    deletionTitle: "Account & Data Deletion Notice",
+    deletionIntro:
+      "At Golazo, we respect your privacy and data sovereignty. If you wish to delete your account or permanently remove your personal data from our systems, you can easily request deletion using the method below.",
+    deletionHow: "How to Request:",
+    deletionHowDesc:
+      "Please send a deletion request email from your registered email address to our support team.",
+    deletionTime: "Processing Time:",
+    deletionTimeDesc:
+      "Once received, all your personal information and associated app data will be permanently purged within ",
+    deletionTimeDays: "2 to 3 business days",
+    deletionEmail: "Support Email:",
+  },
+  es: {
+    backBtn: "Volver al inicio",
+    pageTitle: "Política de privacidad de Golazo",
+    effectiveDate: "Fecha de vigencia: 10 de julio de 2026",
+
+    // 계정 삭제 공지 배너 (히스패닉 유저가 안심할 수 있게 스페인어화!)
+    deletionTitle: "Aviso de eliminación de cuenta y datos",
+    deletionIntro:
+      "En Golazo respetamos tu privacidad y el control de tus datos. Si deseas eliminar tu cuenta o borrar permanentemente tus datos personales de nuestros sistemas, puedes solicitarlo fácilmente de la siguiente manera:",
+    deletionHow: "Cómo solicitarlo:",
+    deletionHowDesc:
+      "Envía un correo de solicitud desde la dirección de correo con la que te registraste a nuestro equipo de soporte.",
+    deletionTime: "Tiempo de proceso:",
+    deletionTimeDesc:
+      "Una vez recibido, toda tu información personal y los datos de la app se borrarán permanentemente en un plazo de ",
+    deletionTimeDays: "2 a 3 días hábiles",
+    deletionEmail: "Correo de soporte:",
+  },
+};
 
 export default function PrivacyPage() {
   const router = useRouter();
+
+  // 💡 기본값은 안전하게 영어('en')로 뼈대 유지
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  useEffect(() => {
+    // 🪄 브라우저 언어 즉시 감지
+    const browserLang = navigator.language || (navigator as any).userLanguage;
+    if (browserLang && browserLang.startsWith("es")) {
+      setLang("es");
+    }
+  }, []);
+
+  const t = translations[lang];
+
   return (
     <div className="min-h-screen bg-rose-50 py-16 px-4 font-sans flex items-center justify-center">
       <div className="absolute top-4 lg:top-6 left-2 lg:left-8 z-20">
@@ -10,9 +66,8 @@ export default function PrivacyPage() {
           type="button"
           onClick={() => router.push("/")}
           className="p-2 text-slate-700 hover:text-pink-400 transition-colors cursor-pointer"
-          aria-label="Go to Home"
+          aria-label={t.backBtn}
         >
-          {/* 심플하고 모던한 SVG 왼쪽 화살표 아이콘 */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -32,51 +87,43 @@ export default function PrivacyPage() {
 
       <div className="max-w-3xl w-full mx-auto border border-slate-200/60 bg-white rounded-3xl p-6 sm:p-12 shadow-xl shadow-pink-100/20">
         <h1 className="text-center text-2xl sm:text-3xl font-black text-slate-900 mb-8 border-b border-slate-100 pb-5">
-          Golazo Privacy Policy
+          {t.pageTitle}
         </h1>
 
         <p className="text-xs font-bold text-slate-500 mb-6 bg-slate-50 inline-block px-3 py-1 rounded-md border border-slate-100">
-          Effective Date: July 10, 2026
+          {t.effectiveDate}
         </p>
 
         <div className="space-y-8 text-sm text-slate-700 leading-relaxed">
-          {/* 계정 및 데이터 삭제 안내 (구글/애플 심사용 글로벌 스탠다드 섹션) */}
+          {/* 📌 사용자 맞춤형 다국어 계정 & 데이터 삭제 안내 박스 */}
           <section className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
             <h2 className="text-base font-black text-slate-900 mb-3 flex items-center gap-2">
-              <span className="text-pink-500">📌</span> Account & Data Deletion
-              Notice
+              <span className="text-pink-500">📌</span> {t.deletionTitle}
             </h2>
 
             <div className="text-sm text-slate-700 space-y-3 leading-relaxed">
-              <p>
-                At <strong>Golazo</strong>, we respect your privacy and data
-                sovereignty. If you wish to delete your account or permanently
-                remove your personal data from our systems, you can easily
-                request deletion using the method below.
-              </p>
+              <p>{t.deletionIntro}</p>
 
               <ul className="list-disc list-inside space-y-1.5 pl-1 text-slate-600">
                 <li>
                   <span className="font-semibold text-slate-800">
-                    How to Request:
+                    {t.deletionHow}
                   </span>{" "}
-                  Please send a deletion request email from your registered
-                  email address to our support team.
+                  {t.deletionHowDesc}
                 </li>
                 <li>
                   <span className="font-semibold text-slate-800">
-                    Processing Time:
+                    {t.deletionTime}
                   </span>{" "}
-                  Once received, all your personal information and associated
-                  app data will be permanently purged within{" "}
+                  {t.deletionTimeDesc}
                   <span className="text-pink-600 font-bold">
-                    2 to 3 business days
+                    {t.deletionTimeDays}
                   </span>
                   .
                 </li>
                 <li>
                   <span className="font-semibold text-slate-800">
-                    Support Email:
+                    {t.deletionEmail}
                   </span>{" "}
                   <a
                     href="mailto:ksz18601@gmail.com"
@@ -89,7 +136,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* 1항 */}
+          {/* 1항 (영문 법적 공신력 본문 유지 🇺🇸) */}
           <section>
             <h2 className="text-base font-black text-slate-900 mb-2 flex items-center gap-1.5">
               <span className="text-pink-500">1.</span> Information We Collect

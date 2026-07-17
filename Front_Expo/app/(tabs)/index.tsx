@@ -1,14 +1,17 @@
+"use client";
 import { client } from "@/api/client";
 import { useTheme } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import {
   CalendarDays,
   Calendar as CalendarIcon,
   Plus,
   X,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -79,6 +82,50 @@ LocaleConfig.locales["en"] = {
   dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   today: "Today",
 };
+
+// 📅 달력 스페인어 글로벌 세팅 (추가!)
+LocaleConfig.locales["es"] = {
+  monthNames: [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ],
+  monthNamesShort: [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ],
+  dayNames: [
+    "Domingo",
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+  ],
+  dayNamesShort: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+  today: "Hoy",
+};
+
 LocaleConfig.defaultLocale = "en";
 
 const { width } = Dimensions.get("window");
@@ -89,6 +136,76 @@ interface DateMemo {
   target_date: string;
   d_day: number | null;
 }
+
+// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: "Special Days",
+    loadingText: "Loading special days...",
+    upNext: "Up Next 🎉",
+    getAiGifts: "Get AI Gift Ideas",
+    upcomingDays: "🗓️ Upcoming Days",
+    noEvents: "No Events",
+    noEventsText: "No events added yet.",
+    noEventsSubText:
+      "Tap the button below to save\nyour loved ones' special days!",
+    addEventBtn: "Add Special Day",
+    addEventTitle: "Add Special Day",
+    whatOccasion: "What is the occasion?",
+    placeholderOccasion: "e.g. Mom's Birthday, Anniversary",
+    whenIsIt: "When is it?",
+    selectDate: "Select a date",
+    saveEvent: "Save Event",
+    selectDateTitle: "Select Date 🗓️",
+    ddayText: "D-Day 🎉",
+
+    // 알림 및 토스트 문구
+    requiredTitle: "Required",
+    requiredMsg: "Please fill in all fields.",
+    saveSuccessTitle: "Saved 🎁",
+    saveSuccessMsg: "Your special day has been added successfully.",
+    saveFailTitle: "Failed",
+    saveFailMsg: "Please check your information and try again.",
+    deleteTitle: "Delete Event",
+    deleteConfirm: 'Are you sure you want to delete "{content}"?',
+    deleteCancel: "Cancel",
+    deleteBtn: "Delete",
+    deleteFailMsg: "Something went wrong while deleting this event.",
+  },
+  es: {
+    headerTitle: "Fechas especiales", // 💡 'Special Days'를 가장 널리 쓰는 다정하고 감성적인 스패니시로 매핑
+    loadingText: "Cargando fechas especiales...",
+    upNext: "Próximo evento 🎉", // 💡 'Up Next' -> '다음 기념일'
+    getAiGifts: "Ideas de regalos con IA", // 💡 'Get AI Gift Ideas' -> 히스패닉들이 검색할 때 가장 먼저 와닿는 명사형
+    upcomingDays: "🗓️ Próximos eventos",
+    noEvents: "Sin eventos",
+    noEventsText: "Aún no hay eventos agregados.",
+    noEventsSubText:
+      "¡Toca el botón de abajo para guardar\nlas fechas especiales de tus seres queridos!",
+    addEventBtn: "Agregar fecha especial",
+    addEventTitle: "Agregar fecha especial",
+    whatOccasion: "¿Cuál es la ocasión?", // 💡 자연스러운 의문문 형식
+    placeholderOccasion: "Ej. Cumpleaños de mamá, Aniversario", // 💡 미국 히스패닉 맞춤형 디폴트 예시 (Mom's Birthday 직관적 대치)
+    whenIsIt: "¿Cuándo es?",
+    selectDate: "Seleccionar fecha",
+    saveEvent: "Guardar evento",
+    selectDateTitle: "Seleccionar fecha 🗓️",
+    ddayText: "D-Day 🎉", // 💡 스페인어권 2030들도 'D-Day'라는 표현은 밈(Meme)이나 소셜 미디어에서 그대로 씁니다.
+
+    // 알림 및 토스트 문구
+    requiredTitle: "Obligatorio",
+    requiredMsg: "Por favor, completa todos los campos.",
+    saveSuccessTitle: "¡Guardado! 🎁",
+    saveSuccessMsg: "Tu fecha especial ha sido agregada con éxito.",
+    saveFailTitle: "Error",
+    saveFailMsg: "Por favor, comprueba tus datos e inténtalo de nuevo.",
+    deleteTitle: "Eliminar evento",
+    deleteConfirm: '¿Estás seguro de que quieres eliminar "{content}"?',
+    deleteCancel: "Cancelar",
+    deleteBtn: "Eliminar",
+    deleteFailMsg: "Hubo un error al intentar eliminar este evento.",
+  },
+};
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -101,6 +218,33 @@ export default function HomeScreen() {
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [memoDate, setMemoDate] = useState("");
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어 + 달력 언어 실시간 바인딩
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+        LocaleConfig.defaultLocale = savedLang;
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+          LocaleConfig.defaultLocale = "es";
+        } else {
+          setLang("en");
+          LocaleConfig.defaultLocale = "en";
+        }
+      }
+    };
+    initLanguage();
+  }, [isModalVisible]); // 모달이 켜지거나 설정이 유지될 때 달력 한글/스페인어 로케일 동기화 보장
+
+  // 현재 언어셋 활성화
+  const t = translations[lang];
 
   // 🔍 1. useQuery: 장고 백엔드로부터 로그인한 유저의 기념일 리스트 가져오기
   const { data: anniversaries = [], isLoading } = useQuery<DateMemo[]>({
@@ -119,14 +263,14 @@ export default function HomeScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dateMemos"] });
-      Alert.alert("Saved 🎁", "Your special day has been added successfully.");
+      Alert.alert(t.saveSuccessTitle, t.saveSuccessMsg);
       setMemoContent("");
       setMemoDate("");
       setIsModalVisible(false);
     },
     onError: (error: any) => {
       console.error("기념일 등록 실패:", error.response?.data);
-      Alert.alert("Failed", "Please check your information and try again.");
+      Alert.alert(t.saveFailTitle, t.saveFailMsg);
     },
   });
 
@@ -158,7 +302,7 @@ export default function HomeScreen() {
     onError: (error: any) => {
       console.error("❌ 백엔드 에러 상태 코드:", error.response?.status);
       console.error("❌ 백엔드 에러 상세 내용:", error.response?.data);
-      Alert.alert("Failed", "Something went wrong while deleting this event.");
+      Alert.alert(t.saveFailTitle, t.deleteFailMsg);
     },
   });
 
@@ -209,7 +353,7 @@ export default function HomeScreen() {
   // 💾 등록하기 버튼 누를 때 검증 핸들러
   const handleCreateMemo = () => {
     if (!memoContent || !memoDate) {
-      Alert.alert("Required", "Please fill in all fields.");
+      Alert.alert(t.requiredTitle, t.requiredMsg);
       return;
     }
     addMemoMutation.mutate({
@@ -220,18 +364,14 @@ export default function HomeScreen() {
 
   // 🗑️ 길게 꾹 눌렀을 때 작동할 삭제 컴펌 알림
   const handleLongPress = (memoId: number, content: string) => {
-    Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${content}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteMemoMutation.mutate(memoId),
-        },
-      ],
-    );
+    Alert.alert(t.deleteTitle, t.deleteConfirm.replace("{content}", content), [
+      { text: t.deleteCancel, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteMemoMutation.mutate(memoId),
+      },
+    ]);
   };
 
   // 👑 목록 중 d_day가 가장 가까운 메인 디데이 타겟 설정
@@ -244,14 +384,14 @@ export default function HomeScreen() {
     >
       {/* 1. 상단 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.logoText}>Special Days</Text>
+        <Text style={styles.logoText}>{t.headerTitle}</Text>
       </View>
 
       {/* 로딩 인디케이터 처리 */}
       {isLoading ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
-          <Text style={styles.loadingText}>Loading special days...</Text>
+          <Text style={styles.loadingText}>{t.loadingText}</Text>
         </View>
       ) : (
         <ScrollView
@@ -265,27 +405,27 @@ export default function HomeScreen() {
               {/* 데이터가 있을 때: 상단 카드 + 다가오는 목록 노출 */}
               <View style={styles.cloudCard}>
                 <View style={styles.bubbleTag}>
-                  <Text style={styles.bubbleTagText}>Up Next 🎉</Text>
+                  <Text style={styles.bubbleTagText}>{t.upNext}</Text>
                 </View>
 
                 <Text style={styles.mainCardTitle}>{mainDDay.content} </Text>
                 <Text style={styles.mainCardDDay}>
                   <Text style={{ color: "#FF7096" }}>
-                    {mainDDay.d_day === 0 ? "D-Day 🎉" : `D-${mainDDay.d_day}`}
+                    {mainDDay.d_day === 0 ? t.ddayText : `D-${mainDDay.d_day}`}
                   </Text>
                 </Text>
                 <TouchableOpacity
                   onPress={() => router.push("/(tabs)/recommend")}
                   style={styles.cuteButton}
                 >
-                  <Text style={styles.cuteButtonText}>Get AI Gift Ideas</Text>
+                  <Text style={styles.cuteButtonText}>{t.getAiGifts}</Text>
                   <Text> 🎁</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.sectionContainer}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>🗓️ Upcoming Days</Text>
+                  <Text style={styles.sectionTitle}>{t.upcomingDays}</Text>
                   <TouchableOpacity
                     style={styles.addButton}
                     onPress={() => setIsModalVisible(true)}
@@ -329,24 +469,24 @@ export default function HomeScreen() {
               style={[styles.cloudCard, { width: "100%", marginBottom: 0 }]}
             >
               <View style={styles.bubbleTag}>
-                <Text style={styles.bubbleTagText}>No Events</Text>
+                <Text style={styles.bubbleTagText}>{t.noEvents}</Text>
               </View>
               <Text style={styles.mainCardDDay}>
-                <Text style={{ color: "#FF7096" }}>No events added yet.</Text>
+                <Text style={{ color: "#FF7096" }}>{t.noEventsText}</Text>
               </Text>
               <Text
                 style={[
                   styles.mainCardTitle,
-                  { fontSize: 14, color: "#AEAEB2", marginTop: 6 },
+                  { fontSize: 13, color: "#AEAEB2", marginTop: 6 },
                 ]}
               >
-                Tap the button below to save{"\n"}your loved ones' special days!
+                {t.noEventsSubText}
               </Text>
               <TouchableOpacity
                 style={styles.cuteButton}
                 onPress={() => setIsModalVisible(true)}
               >
-                <Text style={styles.cuteButtonText}>Add Special Day</Text>
+                <Text style={styles.cuteButtonText}>{t.addEventBtn}</Text>
                 <Text> 🗓️</Text>
               </TouchableOpacity>
             </View>
@@ -377,7 +517,7 @@ export default function HomeScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>Add Special Day</Text>
+                <Text style={styles.modalHeaderTitle}>{t.addEventTitle}</Text>
                 <TouchableOpacity
                   onPress={() => {
                     setIsModalVisible(false);
@@ -389,18 +529,18 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.inputLabel}>What is the occasion?</Text>
+              <Text style={styles.inputLabel}>{t.whatOccasion}</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="e.g. Mom's Birthday, Anniversary"
+                  placeholder={t.placeholderOccasion}
                   placeholderTextColor="#AEAEB2"
                   value={memoContent}
                   onChangeText={setMemoContent}
                 />
               </View>
 
-              <Text style={styles.inputLabel}>When is it?</Text>
+              <Text style={styles.inputLabel}>{t.whenIsIt}</Text>
               <TouchableOpacity
                 style={styles.inputWrapper}
                 onPress={() => setIsCalendarVisible(true)}
@@ -419,11 +559,12 @@ export default function HomeScreen() {
                       <Text
                         style={{
                           color: "#AEAEB2",
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: "600",
                         }}
                       >
-                        {"  "}Select a date
+                        {"  "}
+                        {t.selectDate}
                       </Text>
                     </View>
                   )}
@@ -441,7 +582,9 @@ export default function HomeScreen() {
                 {addMemoMutation.isPending ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={styles.modalSubmitButtonText}>Save Event</Text>
+                  <Text style={styles.modalSubmitButtonText}>
+                    {t.saveEvent}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -459,7 +602,7 @@ export default function HomeScreen() {
           <View style={styles.calendarModalOverlay}>
             <View style={styles.calendarContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>Select Date 🗓️</Text>
+                <Text style={styles.modalHeaderTitle}>{t.selectDateTitle}</Text>
                 <TouchableOpacity onPress={() => setIsCalendarVisible(false)}>
                   <X size={20} color="#AEAEB2" />
                 </TouchableOpacity>
@@ -571,7 +714,7 @@ const styles = StyleSheet.create({
     marginTop: Platform.OS === "ios" ? 11 : 8,
   },
   mainCardDDay: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "700",
     color: "#757580",
     marginTop: Platform.OS === "ios" ? 14 : 10,
@@ -676,8 +819,8 @@ const styles = StyleSheet.create({
     height: 52,
     marginBottom: 16,
   },
-  textInput: { flex: 1, fontSize: 14, fontWeight: "600", color: "#2D2D3A" },
-  dateTextValue: { fontSize: 14, fontWeight: "600", color: "#2D2D3A" },
+  textInput: { flex: 1, fontSize: 13, fontWeight: "600", color: "#2D2D3A" },
+  dateTextValue: { fontSize: 13, fontWeight: "600", color: "#2D2D3A" },
   modalSubmitButton: {
     flexDirection: "row",
     justifyContent: "center",

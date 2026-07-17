@@ -1,8 +1,11 @@
+"use client";
 import { client } from "@/api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Localization from "expo-localization";
 import { router, useLocalSearchParams } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { ArrowLeft, CheckCircle, Gift, ShoppingBag } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,11 +29,79 @@ interface RecommendedProduct {
   image_url: string;
 }
 
+// 🎯 미국 내 히스패닉 맞춤형 결과 화면 텍스트 딕셔너리
+const translations = {
+  en: {
+    headerTitle: "AI Recommendations",
+    aiPickTag: "AI pick",
+    loadingGifts: "Finding Gifts... 🤖",
+    successGifts: "Best Gifts Picked! 🥳",
+    loadingSub:
+      "AI is finding the best gifts that\nyour people will absolutely love.",
+    successSub:
+      "AI has picked the best gifts\nbased on the budget and preferences!",
+    refreshBtn: "Get New Recommendations",
+    sectionTitle: "AI Top3 Picks",
+    whyAiLabel: "🤖 WHY AI RECOMMEND",
+    buyBtn: "🎁 Buy on Amazon",
+    emptyText: "No recommendations yet.\nTry creating a new event!",
+
+    // 알림 메시지
+    alertSuccessTitle: "Success! 🎁",
+    alertSuccessMsg: "AI has picked the perfect gifts!",
+    alertErrorTitle: "Error 😢",
+    alertErrorMsg: "Failed to connect with the AI engine.",
+  },
+  es: {
+    headerTitle: "Recomendaciones IA", // 💡 AI 대신 IA 완벽 반영
+    aiPickTag: "Selección IA",
+    loadingGifts: "Buscando regalos... 🤖",
+    successGifts: "¡Los mejores regalos!🥳",
+    loadingSub:
+      "La IA está buscando los mejores regalos\nque a tus personas les encantarán.",
+    successSub:
+      "¡La IA ha seleccionado los mejores regalos basados en el presupuesto y preferencias!",
+    refreshBtn: "Ver nuevas ideas", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
+    sectionTitle: "Los 3 mejores de la IA",
+    whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
+    buyBtn: "🎁 Comprar en Amazon", // 💡 미국 아마존 랜딩 버튼의 완벽한 스패니시화
+    emptyText: "Aún no hay recomendaciones.\n¡Intenta crear un nuevo evento!",
+
+    // 알림 메시지
+    alertSuccessTitle: "¡Éxito! 🎁",
+    alertSuccessMsg: "¡La IA ha elegido los regalos perfectos!",
+    alertErrorTitle: "Error 😢",
+    alertErrorMsg: "No se pudo conectar con el motor de IA.",
+  },
+};
+
 export default function RecommendResultScreen() {
   const queryClient = useQueryClient();
-
   const params = useLocalSearchParams();
   const eventId = Number(params.event_id);
+
+  // 💡 글로벌 언어 상태 (기본값: 'en')
+  const [lang, setLang] = useState<"en" | "es">("en");
+
+  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
+  useEffect(() => {
+    const initLanguage = async () => {
+      const savedLang = await SecureStore.getItemAsync("userLang");
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      } else {
+        const locale = Localization.getLocales()[0].languageCode;
+        if (locale && locale.startsWith("es")) {
+          setLang("es");
+        } else {
+          setLang("en");
+        }
+      }
+    };
+    initLanguage();
+  }, []);
+
+  const t = translations[lang];
 
   // 🔍 1. useQuery: 기존에 저장된 추천 목록 가져오기
   const {
@@ -56,14 +127,14 @@ export default function RecommendResultScreen() {
     },
     onSuccess: () => {
       refetchHistory();
-      Alert.alert("Success! 🎁", "AI has picked the perfect gifts!");
+      Alert.alert(t.alertSuccessTitle, t.alertSuccessMsg);
     },
     onError: (error: any) => {
       console.error(
         "AI Recommendation Failed:",
         error.response?.data || error.message,
       );
-      Alert.alert("Error 🥲", "Failed to connect with the AI engine.");
+      Alert.alert(t.alertErrorTitle, t.alertErrorMsg);
     },
   });
 
@@ -76,6 +147,7 @@ export default function RecommendResultScreen() {
     }
   }, [eventId, savedRecommendations.length, isQueryLoading]);
 
+  // 성진님의 판단대로, 혼동 방지 및 기기 세션 연동을 위해 amazon.com 영어 순정 링크 규격 그대로 작동!
   const handleOpenLink = async (url: string) => {
     if (!url) return;
     const supported = await Linking.canOpenURL(url);
@@ -112,7 +184,7 @@ export default function RecommendResultScreen() {
         >
           <ArrowLeft size={22} color="#FF7096" strokeWidth={3} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Recommendations</Text>
+        <Text style={styles.headerTitle}>{t.headerTitle}</Text>
       </View>
 
       <ScrollView
@@ -127,17 +199,13 @@ export default function RecommendResultScreen() {
               color={"#FF7096"}
               style={{ marginRight: 5, marginTop: 3 }}
             />
-            <Text style={styles.bubbleTagText}>AI pick</Text>
+            <Text style={styles.bubbleTagText}>{t.aiPickTag}</Text>
           </View>
           <Text style={styles.mainCardTitle}>
-            {recommendMutation.isPending
-              ? "Finding Gifts... 🤖"
-              : "Best Gifts Picked! 🥳"}
+            {recommendMutation.isPending ? t.loadingGifts : t.successGifts}
           </Text>
           <Text style={styles.mainCardSub}>
-            {recommendMutation.isPending
-              ? "AI is finding the best gifts that\nyour people will absolutely love."
-              : "AI has picked the best gifts\nbased on the budget and preferences!"}
+            {recommendMutation.isPending ? t.loadingSub : t.successSub}
           </Text>
 
           {/* 다시 추천받기 버튼 */}
@@ -149,7 +217,7 @@ export default function RecommendResultScreen() {
                 recommendMutation.mutate();
               }}
             >
-              <Text style={styles.cuteButtonText}>Get New Recommendations</Text>
+              <Text style={styles.cuteButtonText}>{t.refreshBtn}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -166,7 +234,7 @@ export default function RecommendResultScreen() {
                 marginTop: Platform.OS === "ios" ? 10.5 : 12,
               }}
             />
-            <Text style={styles.sectionTitle}>AI Top3 Picks</Text>
+            <Text style={styles.sectionTitle}>{t.sectionTitle}</Text>
           </View>
 
           {recommendMutation.isPending ? (
@@ -202,7 +270,7 @@ export default function RecommendResultScreen() {
                 <View style={styles.cardDivider} />
 
                 <View style={styles.reasonContainer}>
-                  <Text style={styles.reasonLabel}>🤖 WHY AI RECOMMEND</Text>
+                  <Text style={styles.reasonLabel}>{t.whyAiLabel}</Text>
                   <Text style={styles.reasonText}>
                     {item.recommendation_reason}
                   </Text>
@@ -215,10 +283,10 @@ export default function RecommendResultScreen() {
                     console.log("Amazon Purchase URL:", item.product_url);
                   }}
                 >
-                  <Text style={styles.linkButtonText}>🎁 Buy on Amazon</Text>
+                  <Text style={styles.linkButtonText}>{t.buyBtn}</Text>
                 </TouchableOpacity>
 
-                {/* 🌟 [수정] 아마존 어소시에이트 공식 공시 문구로 변경 */}
+                {/* 🌟 미국 연방거래위원회(FTC) 필수 명시 문구 (글로벌 표준 영문 유지) */}
                 <Text style={styles.amazonNotice} numberOfLines={1}>
                   As an Amazon Associate, I earn from qualifying purchases.
                 </Text>
@@ -227,9 +295,7 @@ export default function RecommendResultScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <ShoppingBag size={32} color="#E5E5EA" />
-              <Text style={styles.emptyContainerText}>
-                No recommendations yet.{"\n"}Try creating a new event!
-              </Text>
+              <Text style={styles.emptyContainerText}>{t.emptyText}</Text>
             </View>
           )}
         </View>
@@ -270,8 +336,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#757580",
   },
-
-  /* 아기자기한 화이트 클라우드 카드 테마 스타일 */
   cloudCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 32,
@@ -296,7 +360,7 @@ const styles = StyleSheet.create({
   },
   bubbleTagText: { fontSize: 11, fontWeight: "700", color: "#FF7096" },
   mainCardTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     color: "#2D2D3A",
     textAlign: "center",
@@ -309,8 +373,6 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     paddingHorizontal: 10,
   },
-
-  /* 시그니처 큐트 버튼 구조 */
   cuteButton: {
     flexDirection: "row",
     justifyContent: "center",
@@ -326,7 +388,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   cuteButtonText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
-
   sectionContainer: { marginTop: 10 },
   sectionTitle: {
     fontSize: 17,
@@ -336,8 +397,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingLeft: 2,
   },
-
-  /* 개별 상품 카드 레이아웃 테마 */
   productCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 28,
@@ -376,7 +435,7 @@ const styles = StyleSheet.create({
     borderColor: "#FFF0F3",
   },
   reasonLabel: {
-    fontSize: 10, // 영문 대문자 간격 고려해 아주 세련되게 축소
+    fontSize: 10,
     fontWeight: "800",
     color: "#FF7096",
     marginBottom: 4,
@@ -398,7 +457,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   linkButtonText: { fontSize: 14, fontWeight: "800", color: "white" },
-
   loaderBox: {
     padding: 30,
     backgroundColor: "#FFFFFF",
@@ -428,7 +486,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
-  // 💡 스타일 이름도 amazonNotice로 깔끔하게 정비
   amazonNotice: {
     fontSize: Platform.OS === "ios" ? 9 : 8,
     color: "#868e96",

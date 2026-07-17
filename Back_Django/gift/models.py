@@ -84,6 +84,7 @@ class Event(models.Model):
         ("BABY_SHOWER", "Baby Shower"),
         ("BIRTH", "New Baby"),
         ("CHRISTMAS", "Christmas"),
+        ("REYES_MAGOS", "Three Kings"),
         ("VALENTINE", "Valentine's"),
         ("MOTHERS_DAY", "Mother's Day"),
         ("FATHERS_DAY", "Father's Day"),

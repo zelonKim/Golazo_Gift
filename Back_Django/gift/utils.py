@@ -141,14 +141,14 @@ from amazon_creatorsapi import AmazonCreatorsApi, Country
 def get_amazon_product(search_keyword, min_budget=0, max_budget=999999):
     """
     RapidAPI(Real-Time Amazon Data API)를 이용하여 아마존 실시간 상품 정보(이미지, 가격)를 조회하고
-    내 어소시에이트 태그가 이식된 최종 상품 상세 링크를 생성합니다.
+    사용자 예산 범위에 최적화된 상품 상세 링크를 생성합니다.
     """
-    # 1. 기본 안전 가드값 및 트래킹 태그 설정
     fallback_price = 0
-    final_image_url = None  # 💡 변수명을 꼬이지 않게 명확히 설정합니다.
+    final_image_url = None
     associate_tag = os.environ.get("AMAZON_ASSOCIATE_TAG", "golazo0d4-20")
     rapidapi_key = os.environ.get("RAPIDAPI_KEY")
 
+    # 1. API 키 미존재 시 검색 URL로 대체
     if not rapidapi_key:
         encoded_keyword = urllib.parse.quote_plus(search_keyword)
         fallback_search_url = (
@@ -164,8 +164,9 @@ def get_amazon_product(search_keyword, min_budget=0, max_budget=999999):
             "price": fallback_price,
         }
 
-    # 2. RapidAPI를 통한 실시간 아마존 상품 검색 요청
+    # 2. RapidAPI 검색 요청 설정 (★ min_price, max_price 파라미터 적용)
     url = "https://real-time-amazon-data.p.rapidapi.com/search"
+
     querystring = {
         "query": search_keyword,
         "page": "1",
@@ -173,12 +174,20 @@ def get_amazon_product(search_keyword, min_budget=0, max_budget=999999):
         "sort_by": "RELEVANCE",
         "product_condition": "NEW",
     }
+
+    # 예산 조건이 명확히 주어진 경우 API 쿼리에 직접 전달하여 1차 정리
+    if min_budget > 0:
+        querystring["min_price"] = str(int(min_budget))
+    if max_budget < 999999:
+        querystring["max_price"] = str(int(max_budget))
+
     headers = {
         "X-RapidAPI-Key": rapidapi_key,
         "X-RapidAPI-Host": "real-time-amazon-data.p.rapidapi.com",
     }
 
     items = []
+
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=8)
         if response.status_code == 200:
@@ -190,43 +199,57 @@ def get_amazon_product(search_keyword, min_budget=0, max_budget=999999):
     except Exception as e:
         print(f"❌ RapidAPI Connection Error: {e}")
 
-    valid_item = None
+    # 헬퍼 함수: 다양한 가격 필드 대응 및 파싱
+    def parse_price(item_dict):
+        # product_price, product_original_price, product_minimum_offer_price 순서로 확인
+        price_candidates = [
+            item_dict.get("product_price"),
+            item_dict.get("product_original_price"),
+            item_dict.get("product_minimum_offer_price"),
+        ]
+        for p in price_candidates:
+            if p:
+                try:
+                    clean_p = str(p).replace("$", "").replace(",", "").strip()
+                    val = float(clean_p)
+                    if val > 0:
+                        return val
+                except (ValueError, TypeError):
+                    continue
+        return 0.0
 
-    # 3. 받아온 아이템 리스트 중 예산 범위에 부합하는 첫 번째 아이템 탐색
+    valid_candidates = []
+
+    # 3. 받아온 아이템 리스트 중 예산 범위 검증
     for item in items:
-        try:
-            price_str = item.get("product_price")
-            if not price_str:
-                continue
-            product_price = float(price_str.replace("$", "").replace(",", ""))
+        product_price = parse_price(item)
 
-            if min_budget <= product_price <= max_budget:
-                valid_item = item
-                break
-        except (ValueError, TypeError, AttributeError):
-            continue
+        # 예산 범위 내에 있는지 확인 (가격이 0인 것은 일단 제외 또는 예외 처리)
+        if product_price > 0 and (min_budget <= product_price <= max_budget):
+            valid_candidates.append((product_price, item))
+        elif min_budget == 0 and product_price <= max_budget:
+            valid_candidates.append((product_price, item))
 
-    # 4. [보안 가드] 분기 처리 철저하게 가이드
+    valid_item = None
+    if valid_candidates:
+        # 💡 예산 범위 내 candidate 중 예산 상한선(max_budget)에 가장 잘 들어맞는(가장 비싼/퀄리티 높은) 상품 선택
+        # 필요하다면 리뷰 수/별점 정렬로도 변경 가능합니다.
+        valid_candidates.sort(key=lambda x: x[0], reverse=True)
+        valid_item = valid_candidates[0][1]
+
+    # 4. 분기 처리 및 결과 반환
     if not valid_item:
         print(
             f"🛑 [Warning] No item found within budget for '{search_keyword}' ➔ Deploying Safe-Guard"
         )
 
         if items:
-            # 예산은 맞지 않지만, 검색 상위 1위 아이템 정보 탈취
             first_item = items[0]
-            try:
-                raw_price_str = first_item.get("product_price", "0")
-                raw_price = float(raw_price_str.replace("$", "").replace(",", ""))
-            except (ValueError, TypeError):
-                raw_price = fallback_price
-
+            raw_price = parse_price(first_item)
             final_price = (
-                raw_price if min_budget <= raw_price <= max_budget else fallback_price
+                raw_price if (min_budget <= raw_price <= max_budget) else raw_price
             )
             final_product_name = first_item.get("product_title", search_keyword)
-
-            # 💡 [핵심 해결 1] Safe-Guard 상품의 이미지를 전역 변수에 정확하게 전달!
             final_image_url = first_item.get("product_photo")
 
             raw_url = first_item.get("product_url")
@@ -235,56 +258,49 @@ def get_amazon_product(search_keyword, min_budget=0, max_budget=999999):
                 f"✨ [Safe-Guard Match]: {final_product_name} / Adjusted Price -> ${final_price}"
             )
         else:
-            # 아예 검색 결과 자체가 없을 때 초극단 방어선
             final_product_name = search_keyword
             final_price = fallback_price
             encoded_keyword = urllib.parse.quote_plus(search_keyword)
             earning_url = (
                 f"https://www.amazon.com/s?k={encoded_keyword}&tag={associate_tag}"
             )
-            final_image_url = None  # 검색 결과 자체가 없으므로 이미지 없음
+            final_image_url = None
 
     else:
         # 정상 매칭 성공 시 데이터 가공
         final_product_name = valid_item.get("product_title")
-        price_str = valid_item.get("product_price", "0")
-        final_price = float(price_str.replace("$", "").replace(",", ""))
-
-        # 💡 [핵심 해결 2] 정상 매칭된 상품의 이미지를 변수에 할당!
+        final_price = parse_price(valid_item)
         final_image_url = valid_item.get("product_photo")
 
         raw_url = valid_item.get("product_url")
         earning_url = inject_associate_tag(raw_url, associate_tag, search_keyword)
         print(f"🍏 [Match Success]: {final_product_name} / ${final_price}")
 
-
-
     print("이미지 URL:", final_image_url)
-    # 최종 리턴 딕셔너리에 바인딩
     return {
         "product_name": final_product_name,
         "product_url": earning_url,
-        "image_url": final_image_url,  
+        "image_url": final_image_url,
         "price": final_price,
     }
 
 
+
+
 def inject_associate_tag(original_url, tag, fallback_keyword):
-    """
-    크롤링으로 가져온 원본 아마존 주소에 내 어소시에이트 태그를
-    강제로 주입하거나 교체하여 정상적으로 정산되게 만드는 헬퍼 함수입니다.
-    """
     if not original_url:
         encoded_keyword = urllib.parse.quote_plus(fallback_keyword)
         return f"https://www.amazon.com/s?k={encoded_keyword}&tag={tag}"
 
+    # 💡 [보완] 상대 경로(/dp/...)로 들어올 경우 호스트(domain) 붙여주기
+    if original_url.startswith("/"):
+        original_url = f"https://www.amazon.com{original_url}"
+
     parsed_url = urllib.parse.urlparse(original_url)
     query_params = urllib.parse.parse_qs(parsed_url.query)
 
-    # 기존에 타인이 심어둔 태그가 있거나 누락되어 있다면 내 태그로 강제 덮어쓰기
     query_params["tag"] = [tag]
 
-    # 쿼리 파라미터 재구성 및 도메인 복구
     new_query = urllib.parse.urlencode(query_params, doseq=True)
 
     customized_url = urllib.parse.urlunparse(

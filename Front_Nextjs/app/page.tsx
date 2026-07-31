@@ -11,17 +11,17 @@ const translations = {
     mainTitleHighlight: "Let Golazo AI Pick",
     subTitle:
       "Just enter a few simple details about the recipient. Our AI will pick a fail-proof list of the best gift ideas.",
-    ctaBtn: "Get AI Gift Picks Now 🤖",
+    ctaBtn: "Get Started for Free 🤖",
     privacy: "Privacy Policy",
     rights: "© 2026 Golazo. All rights reserved.",
   },
   es: {
     badgeText: "Regalos IA", // 💡 성진님의 시그니처 4글자 절약 조합!
-    mainTitleLine1: "Olvídate de buscar regalos", // 💡 자연스러운 현지어 의역
-    mainTitleHighlight: "Golazo IA lo hace por ti", // 💡 "골라조 IA가 널 위해 해줄게"
+    mainTitleLine1: "Sin estrés por regalar", // 💡 자연스러운 현지어 의역
+    mainTitleHighlight: "Golazo IA elige", // 💡 "골라조 IA가 널 위해 해줄게"
     subTitle:
       "Solo ingresa algunos datos sobre esa persona. Nuestra IA elegirá la lista perfecta de regalos ideales.",
-    ctaBtn: "Buscar recomendaciones 🤖", // 💡 가로 레이아웃을 해치지 않는 콤팩트한 CTA
+    ctaBtn: "Comenzar gratis 🤖", // 💡 가로 레이아웃을 해치지 않는 콤팩트한 CTA
     privacy: "Política de privacidad",
     rights: "© 2026 Golazo. Todos los derechos reservados.",
   },

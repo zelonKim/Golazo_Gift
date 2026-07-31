@@ -43,8 +43,8 @@ const translations = {
     labelMaxBudget: "💎 Max Budget",
 
     // 인풋 플레이스홀더
-    placeholderHobbies: "e.g. Reading, Hiking, Coffee brewing",
-    placeholderNotes: "e.g. Dislikes perfumes, loves cats, allergic to nuts",
+    placeholderHobbies: "e.g. Hiking, Gaming, Cooking",
+    placeholderNotes: "e.g. Loves cats, Dislikes perfumes, Has nut allergy",
 
     // 에러 및 경고 멘트
     budgetWarning: "⚠️ Min budget cannot exceed max budget.",
@@ -67,14 +67,15 @@ const translations = {
     labelOccasion: "🥳 Motivo del regalo",
     labelAgeGroup: "🎂 Edad",
     labelGender: "🧬 Género",
-    labelHobbies: "🎨 Hobbies e intereses (Opcional)",
-    labelNotes: "⭐️ Notas importantes (Opcional)",
+    labelHobbies: "🎨 Hobbies / intereses (Opcional)",
+    labelNotes: "⭐️ Notas / Preferencias (Opcional)",
     labelMinBudget: "🪙 Presupuesto mín.",
     labelMaxBudget: "💎 Presupuesto máx.",
 
     // 인풋 플레이스홀더
-    placeholderHobbies: "Ej. Lectura, senderismo, café",
-    placeholderNotes: "Ej. No le gustan los perfumes, ama los gatos, etc.",
+    placeholderHobbies: "Ej. Senderismo, videojuegos, cocinar",
+    placeholderNotes:
+      "Ej. Ama los gatos, no le gustan los perfumes, alergia a frutos secos",
 
     // 에러 및 경고 멘트
     budgetWarning: "⚠️ El presupuesto mínimo no puede superar al máximo.",
@@ -90,15 +91,15 @@ const translations = {
 const getPurposeOptions = (lang: "en" | "es") => [
   {
     value: "FRIEND_BDAY",
-    label: lang === "es" ? "Cumple amigo/a" : "Friend's BDay",
+    label: lang === "es" ? "Cumple de amistad" : "Friend's BDay",
   },
   {
     value: "LOVER_BDAY",
-    label: lang === "es" ? "Cumple pareja" : "Partner's BDay",
+    label: lang === "es" ? "Cumple de pareja" : "Partner's BDay",
   },
   {
     value: "PARENTS_BDAY",
-    label: lang === "es" ? "Cumple papás" : "Parents' BDay",
+    label: lang === "es" ? "Cumple de padres" : "Parent's BDay",
   },
   {
     value: "COUPLE_ANNIV",
@@ -109,26 +110,28 @@ const getPurposeOptions = (lang: "en" | "es") => [
     label: lang === "es" ? "Aniv. de bodas" : "Wedding Anniv",
   },
   {
-    value: "REYES_MAGOS",
-    label: lang === "es" ? "Día de Reyes" : "Three Kings",
-  }, // 👑 동방박사 세트 추가!
-  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
-  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
-  {
     value: "HOUSEWARMING",
     label: lang === "es" ? "Estrenar casa" : "Housewarming",
   },
   { value: "WEDDING", label: lang === "es" ? "Boda" : "Wedding" },
   {
     value: "BRIDAL_SHOWER",
-    label: lang === "es" ? "Despedida soltera" : "Bridal Shower",
+    label: lang === "es" ? "Fiesta de novia" : "Bridal Shower",
   },
   {
     value: "BABY_SHOWER",
     label: lang === "es" ? "Baby Shower" : "Baby Shower",
   },
   { value: "BIRTH", label: lang === "es" ? "Nacimiento" : "New Baby" },
+  {
+    value: "THANKSGIVING",
+    label: lang === "es" ? "Acción de Gracias" : "Thanksgiving",
+  },
   { value: "CHRISTMAS", label: lang === "es" ? "Navidad" : "Christmas" },
+  {
+    value: "REYES_MAGOS",
+    label: lang === "es" ? "Día de Reyes" : "Three Kings",
+  },
   { value: "VALENTINE", label: lang === "es" ? "San Valentín" : "Valentine's" },
   {
     value: "MOTHERS_DAY",
@@ -138,22 +141,24 @@ const getPurposeOptions = (lang: "en" | "es") => [
     value: "FATHERS_DAY",
     label: lang === "es" ? "Día del Padre" : "Father's Day",
   },
+  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
+  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
   { value: "THANK_YOU", label: lang === "es" ? "Agradecimiento" : "Thank You" },
   { value: "GET_WELL", label: lang === "es" ? "Recuperación" : "Get Well" },
-  { value: "SELF_GIFT", label: lang === "es" ? "Para mí" : "For Me" },
+  { value: "SELF_GIFT", label: lang === "es" ? "Para mí" : "Treat Myself" },
 ];
 
 // 🎯 연령대 다국어 리스트
 const getAgeOptions = (lang: "en" | "es") => [
-  { value: "0", label: lang === "es" ? "Menor de 10" : "Under 10" },
-  { value: "10", label: lang === "es" ? "10 a 19 años" : "10s" },
-  { value: "20", label: lang === "es" ? "20 a 29 años" : "20s" },
-  { value: "30", label: lang === "es" ? "30 a 39 años" : "30s" },
-  { value: "40", label: lang === "es" ? "40 a 49 años" : "40s" },
-  { value: "50", label: lang === "es" ? "50 a 59 años" : "50s" },
-  { value: "60", label: lang === "es" ? "60 a 69 años" : "60s" },
-  { value: "70", label: lang === "es" ? "70 a 79 años" : "70s" },
-  { value: "80", label: lang === "es" ? "80 o más" : "80s & Above" },
+  { value: "0", label: lang === "es" ? "Menos de 10" : "Under 10" },
+  { value: "10", label: lang === "es" ? "10-19 años" : "10s" },
+  { value: "20", label: lang === "es" ? "20-29 años" : "20s" },
+  { value: "30", label: lang === "es" ? "30-39 años" : "30s" },
+  { value: "40", label: lang === "es" ? "40-49 años" : "40s" },
+  { value: "50", label: lang === "es" ? "50-59 años" : "50s" },
+  { value: "60", label: lang === "es" ? "60-69 años" : "60s" },
+  { value: "70", label: lang === "es" ? "70-79 años" : "70s" },
+  { value: "80", label: lang === "es" ? "80+ años" : "80s+" },
 ];
 
 // 🎯 성별 다국어 리스트

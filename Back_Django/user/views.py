@@ -193,9 +193,9 @@ class GoogleLoginView(APIView):
             )
         try:
             ALLOWED_CLIENT_IDS = [
-                "98991306295-v4vpr6ecbiu0k29umjm70h01g1d9jis0.apps.googleusercontent.com",  # Web Client ID
-                "98991306295-mhv6t76alflm4t0rrj4u8f2fbres67un.apps.googleusercontent.com",  # Android Client ID (json 파일에 있던 값)
-                "98991306295-lovlqprpttnq8j8cnmubtqjmgtofr1o.apps.googleusercontent.com",  # iOS Client ID (plist 파일에 있던 값)
+                "520508328364-1mhi8jtom62gn4kvhlupbm08hpa92n29.apps.googleusercontent.com",  # Web Client ID
+                "520508328364-6orujs2vs6jd7bitan4ob43mqleurk19.apps.googleusercontent.com",  # Android Client ID
+                "520508328364-371ttf20f36iumci7k0q2lht6om5g0u3.apps.googleusercontent.com",  # iOS Client ID
             ]
 
             id_info = id_token.verify_oauth2_token(
@@ -262,7 +262,7 @@ class AppleLoginView(APIView):
             apple_public_keys = requests.get(
                 "https://appleid.apple.com/auth/keys"
             ).json()
-            client_id = "com.zelon.golazo"
+            client_id = "com.zelon.golazo.gift.us"
 
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
@@ -312,7 +312,7 @@ class AppleLoginView(APIView):
             else:
                 # [Case B] 완전히 새로운 유저인 경우 가입을 진행합니다.
                 # 두 번째 로그인부터는 email이 안 오기 때문에, 첫 가입 때 무조건 이메일을 확정 지어 둡니다.
-                final_email = email if email else f"apple_{social_id}@zelon.com"
+                final_email = email if email else f"apple_{social_id}@golazo.ai"
 
                 user = User.objects.create(
                     social_provider="apple",

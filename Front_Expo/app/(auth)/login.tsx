@@ -21,6 +21,8 @@ import {
   View,
 } from "react-native";
 // import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -32,7 +34,7 @@ interface LoginData {
 
 interface SocialLoginData {
   provider: "google" | "apple";
-  token: string; // 구글은 idToken, 애플은 identityToken
+  token: string;
 }
 
 // 🎯 미국 내 히스패닉(US-Spanish) 사용 패턴을 200% 반영한 번역 딕셔너리
@@ -84,15 +86,15 @@ export default function LoginScreen() {
   const [lang, setLang] = useState<"en" | "es">("en");
 
   // 1. 구글 SDK 초기화 (앱 실행 시 최초 1회 동작)
-  // useEffect(() => {
-  //   GoogleSignin.configure({
-  //     webClientId:
-  //       "98991306295-v4vpr6ecbiu0k29umjm70h01g1d9jis0.apps.googleusercontent.com",
-  //     iosClientId:
-  //       "98991306295-lovlqprpttnq8j8cnnmubtqjmgtofr1o.apps.googleusercontent.com",
-  //     offlineAccess: true,
-  //   });
-  // }, []);
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId:
+        "520508328364-1mhi8jtom62gn4kvhlupbm08hpa92n29.apps.googleusercontent.com",
+      iosClientId:
+        "520508328364-371ttf20f36iumci7k0q2lht6om5g0u3.apps.googleusercontent.com",
+      offlineAccess: true,
+    });
+  }, []);
 
   // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
   useEffect(() => {
@@ -114,8 +116,6 @@ export default function LoginScreen() {
     initLanguage();
   }, []);
 
-
-  
   // 현재 언어셋 매핑
   const t = translations[lang];
 
@@ -152,7 +152,6 @@ export default function LoginScreen() {
     },
   });
 
-  // 소셜 로그인 (구글, 애플 공용)
   const socialLoginMutation = useMutation({
     mutationFn: async (socialData: SocialLoginData) => {
       const response = await client.post(`user/${socialData.provider}/login/`, {
@@ -176,57 +175,56 @@ export default function LoginScreen() {
   };
 
   // 🌐 구글 로그인 연동
-  // const handleGoogleLogin = async () => {
-  //   try {
-  //     await GoogleSignin.hasPlayServices();
-  //     const userInfo = await GoogleSignin.signIn();
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
 
-  //     const idToken = userInfo.idToken || userInfo.data?.idToken;
-
-  //     if (idToken) {
-  //       // 백엔드로 전달
-  //       socialLoginMutation.mutate({
-  //         provider: "google",
-  //         token: idToken,
-  //       });
-  //     } else {
-  //       Alert.alert("오류", "구글 인증 토큰을 가져오지 못했습니다.");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("구글 로그인 에러:", error);
-  //     // 사용자가 취소한 게 아니라면 에러 알림
-  //     if (error.code !== "ASYNC_OP_IN_PROGRESS") {
-  //       Alert.alert("구글 로그인 실패", "로그인 도중 오류가 발생했습니다.");
-  //     }
-  //   }
-  // };
+      if (idToken) {
+        // 백엔드로 전달
+        socialLoginMutation.mutate({
+          provider: "google",
+          token: idToken,
+        });
+      } else {
+        Alert.alert("오류", "구글 인증 토큰을 가져오지 못했습니다.");
+      }
+    } catch (error: any) {
+      console.error("구글 로그인 에러:", error);
+      // 사용자가 취소한 게 아니라면 에러 알림
+      if (error.code !== "ASYNC_OP_IN_PROGRESS") {
+        Alert.alert("구글 로그인 실패", "로그인 도중 오류가 발생했습니다.");
+      }
+    }
+  };
 
   // 🍏 애플 로그인 연동
-  // const handleAppleLogin = async () => {
-  //   try {
-  //     const credential = await AppleAuthentication.signInAsync({
-  //       requestedScopes: [
-  //         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-  //         AppleAuthentication.AppleAuthenticationScope.EMAIL,
-  //       ],
-  //     });
+  const handleAppleLogin = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
 
-  //     if (credential.identityToken) {
-  //       // 백엔드로 전달
-  //       socialLoginMutation.mutate({
-  //         provider: "apple",
-  //         token: credential.identityToken,
-  //       });
-  //     } else {
-  //       Alert.alert("오류", "애플 인증 토큰을 가져오지 못했습니다.");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("애플 로그인 에러:", error);
-  //     if (error.code !== "ERR_REQUEST_CANCELED") {
-  //       Alert.alert("애플 로그인 실패", "로그인 도중 오류가 발생했습니다.");
-  //     }
-  //   }
-  // };
+      if (credential.identityToken) {
+        // 백엔드로 전달
+        socialLoginMutation.mutate({
+          provider: "apple",
+          token: credential.identityToken,
+        });
+      } else {
+        Alert.alert("오류", "애플 인증 토큰을 가져오지 못했습니다.");
+      }
+    } catch (error: any) {
+      console.error("애플 로그인 에러:", error);
+      if (error.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("애플 로그인 실패", "로그인 도중 오류가 발생했습니다.");
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
@@ -305,7 +303,7 @@ export default function LoginScreen() {
             ) : (
               <View style={styles.socialButtonRow}>
                 {/* 구글 로그인 */}
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleGoogleLogin}>
                   <Image
                     source={require("@/assets/images/google_login.png")}
                     style={styles.googleIcon}
@@ -313,7 +311,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 {/* 애플 로그인 */}
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleAppleLogin}>
                   <Image
                     source={require("@/assets/images/apple_login.png")}
                     style={styles.appleIcon}

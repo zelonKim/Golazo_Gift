@@ -2,10 +2,12 @@
   "expo": {
     "name": "Golazo Gift",
     "slug": "Golazo-gift-us",
+    "version": "2.0.0",
     "scheme": [
-      "golazo-gift-us"
+      "golazo-gift-us",
+      "com.googleusercontent.apps.520508328364-371ttf20f36iumci7k0q2lht6om5g0u3"
     ],
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -15,22 +17,25 @@
       "backgroundColor": "#FFF0F2"
     },
     "ios": {
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "bundleIdentifier": "com.zelon.golazo.gift.us",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.98991306295-lovlqprpttnq8j8cnmubtqjmgtofr1o"
+              "com.googleusercontent.apps.520508328364-371ttf20f36iumci7k0q2lht6om5g0u3"
             ]
           }
         ]
       }
     },
     "android": {
+      "versionCode": 2,
       "package": "com.zelon.golazo.gift.us",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FFF0F2"
@@ -52,6 +57,8 @@
           "color": "#ffffff"
         }
       ],
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
@@ -61,7 +68,11 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-font",
+      "expo-web-browser",
+      "expo-image",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

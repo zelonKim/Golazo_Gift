@@ -7,7 +7,6 @@
       "golazo-gift-us",
       "com.googleusercontent.apps.520508328364-371ttf20f36iumci7k0q2lht6om5g0u3"
     ],
-    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
@@ -57,17 +56,17 @@
           "color": "#ffffff"
         }
       ],
-      "@react-native-google-signin/google-signin",
-      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
           "ios": {
-            "useModularHeaders": true,
-            "useFrameworks": "dynamic"
+            "useFrameworks": "static",
+            "deploymentTarget": "15.1"
           }
         }
       ],
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
       "expo-localization",
       "expo-font",
       "expo-web-browser",

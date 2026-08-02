@@ -19,6 +19,9 @@
       "buildNumber": "2",
       "supportsTablet": true,
       "bundleIdentifier": "com.zelon.golazo.gift.us",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -71,7 +74,9 @@
       "expo-font",
       "expo-web-browser",
       "expo-image",
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true

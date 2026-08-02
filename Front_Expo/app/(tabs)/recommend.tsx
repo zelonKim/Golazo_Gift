@@ -60,7 +60,7 @@ const translations = {
     mainSub:
       "Selecciona un destinatario y la ocasión para obtener las ideas de regalo perfectas recomendadas por IA",
     selectRecipient: "Seleccionar destinatario",
-    addPeopleBtn: "Agregar personas +",
+    addPeopleBtn: "Agregar conocide +",
     occasionLabel: "Ocasión",
     budgetLabel: "Rango de presupuesto ($)",
     minBudgetPlaceholder: "Mínimo",

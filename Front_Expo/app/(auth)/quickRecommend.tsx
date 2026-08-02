@@ -118,8 +118,6 @@ const getPurposeOptions = (lang: "en" | "es") => [
     label: lang === "es" ? "Aniv. de bodas" : "Wedding Anniv",
   },
 
-  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
-  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
   {
     value: "HOUSEWARMING",
     label: lang === "es" ? "Estrenar casa" : "Housewarming",
@@ -134,6 +132,10 @@ const getPurposeOptions = (lang: "en" | "es") => [
     label: lang === "es" ? "Baby Shower" : "Baby Shower",
   },
   { value: "BIRTH", label: lang === "es" ? "Nacimiento" : "New Baby" },
+  {
+    value: "THANKS_GIVING",
+    label: lang === "es" ? "Acción de Gracias" : "Thanksgiving",
+  },
   { value: "CHRISTMAS", label: lang === "es" ? "Navidad" : "Christmas" },
   {
     value: "REYES_MAGOS",
@@ -148,6 +150,8 @@ const getPurposeOptions = (lang: "en" | "es") => [
     value: "FATHERS_DAY",
     label: lang === "es" ? "Día del Padre" : "Father's Day",
   },
+  { value: "GRADUATE", label: lang === "es" ? "Graduación" : "Graduation" },
+  { value: "EMPLOY", label: lang === "es" ? "Nuevo trabajo" : "New Job" },
   { value: "THANK_YOU", label: lang === "es" ? "Agradecimiento" : "Thank You" },
   { value: "GET_WELL", label: lang === "es" ? "Recuperación" : "Get Well" },
   { value: "SELF_GIFT", label: lang === "es" ? "Para mí" : "For Me" },

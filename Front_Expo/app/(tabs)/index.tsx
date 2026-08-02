@@ -2,7 +2,9 @@
 import { client } from "@/api/client";
 import { useTheme } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Device from "expo-device";
 import * as Localization from "expo-localization";
+import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -28,17 +30,19 @@ import {
   View,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
+import messaging from '@react-native-firebase/messaging';
+
 
 // 🔔 알림이 들어왔을 때 OS가 알림을 화면에 어떻게 띄울지 핸들러 기본 설정
-// Notifications.setNotificationHandler({
-//   handleNotification: async () => ({
-//     shouldShowAlert: true,
-//     shouldPlaySound: true,
-//     shouldSetBadge: false,
-//   }),
-// });
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 // 📅 달력 영어 글로벌 세팅
 LocaleConfig.locales["en"] = {
@@ -277,6 +281,7 @@ export default function HomeScreen() {
   // 🚀 3. useMutation: 스마트폰 기기 푸시 토큰 백엔드로 전송 (POST)
   const savePushTokenMutation = useMutation({
     mutationFn: async (token: string) => {
+      console.log("💡 FCM 디바이스 푸시 토큰:", token);
       return await client.post("user/push-token/", { token });
     },
     onSuccess: () => {
@@ -307,7 +312,6 @@ export default function HomeScreen() {
   });
 
   // 💡 초동 로드 시 알림 권한 획득 및 토큰 추출 프로세스 기동
-  /*
   useEffect(() => {
     async function setupNotifications() {
       if (!Device.isDevice) {
@@ -330,8 +334,20 @@ export default function HomeScreen() {
       }
 
       try {
-        const tokenData = await Notifications.getDevicePushTokenAsync();
-        savePushTokenMutation.mutate(tokenData.data);
+        let pushToken = "";
+
+        if (Platform.OS === 'ios') {
+          // ⭕ iOS: React Native Firebase를 통해 실제 FCM 토큰 추출
+          await messaging().registerDeviceForRemoteMessages();
+          pushToken = await messaging().getToken();
+        } else {
+          // ⭕ Android: 기존처럼 getDevicePushTokenAsync 사용 (FCM 토큰 반환됨)
+          const tokenData = await Notifications.getDevicePushTokenAsync();
+          pushToken = tokenData.data;
+        }
+
+        console.log("LOG 🔑 서버로 전달할 FCM 토큰:", pushToken);
+        savePushTokenMutation.mutate(pushToken);
 
         if (Platform.OS === "android") {
           Notifications.setNotificationChannelAsync("default", {
@@ -348,7 +364,6 @@ export default function HomeScreen() {
 
     setupNotifications();
   }, []);
-*/
 
   // 💾 등록하기 버튼 누를 때 검증 핸들러
   const handleCreateMemo = () => {
@@ -507,92 +522,95 @@ export default function HomeScreen() {
           setIsModalVisible(false);
         }}
       >
-        {/* <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
           style={{ flex: 1 }}
           keyboardVerticalOffset={Platform.select({
-            ios: -80,
-            android: -60,
+            ios: -120,
+            android: -100,
           })}
-        > */}
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>{t.addEventTitle}</Text>
+        >
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>{t.addEventTitle}</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setIsModalVisible(false);
+                      setMemoContent("");
+                      setMemoDate("");
+                    }}
+                  >
+                    <X size={20} color="#AEAEB2" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.inputLabel}>{t.whatOccasion}</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={t.placeholderOccasion}
+                    placeholderTextColor="#AEAEB2"
+                    value={memoContent}
+                    onChangeText={setMemoContent}
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>{t.whenIsIt}</Text>
                 <TouchableOpacity
-                  onPress={() => {
-                    setIsModalVisible(false);
-                    setMemoContent("");
-                    setMemoDate("");
-                  }}
+                  style={styles.inputWrapper}
+                  onPress={() => setIsCalendarVisible(true)}
                 >
-                  <X size={20} color="#AEAEB2" />
+                  <Text
+                    style={[
+                      styles.dateTextValue,
+                      !memoDate && { color: "#AEAEB2" },
+                    ]}
+                  >
+                    {memoDate || (
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
+                      >
+                        <CalendarDays size={18} color={"#AEAEB2"} />
+                        <Text
+                          style={{
+                            color: "#AEAEB2",
+                            fontSize: 13,
+                            fontWeight: "600",
+                          }}
+                        >
+                          {"  "}
+                          {t.selectDate}
+                        </Text>
+                      </View>
+                    )}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalSubmitButton,
+                    addMemoMutation.isPending && styles.disabledButton,
+                  ]}
+                  onPress={handleCreateMemo}
+                  disabled={addMemoMutation.isPending}
+                >
+                  {addMemoMutation.isPending ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <Text style={styles.modalSubmitButtonText}>
+                      {t.saveEvent}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
-
-              <Text style={styles.inputLabel}>{t.whatOccasion}</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={t.placeholderOccasion}
-                  placeholderTextColor="#AEAEB2"
-                  value={memoContent}
-                  onChangeText={setMemoContent}
-                />
-              </View>
-
-              <Text style={styles.inputLabel}>{t.whenIsIt}</Text>
-              <TouchableOpacity
-                style={styles.inputWrapper}
-                onPress={() => setIsCalendarVisible(true)}
-              >
-                <Text
-                  style={[
-                    styles.dateTextValue,
-                    !memoDate && { color: "#AEAEB2" },
-                  ]}
-                >
-                  {memoDate || (
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <CalendarDays size={18} color={"#AEAEB2"} />
-                      <Text
-                        style={{
-                          color: "#AEAEB2",
-                          fontSize: 13,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {"  "}
-                        {t.selectDate}
-                      </Text>
-                    </View>
-                  )}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.modalSubmitButton,
-                  addMemoMutation.isPending && styles.disabledButton,
-                ]}
-                onPress={handleCreateMemo}
-                disabled={addMemoMutation.isPending}
-              >
-                {addMemoMutation.isPending ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.modalSubmitButtonText}>
-                    {t.saveEvent}
-                  </Text>
-                )}
-              </TouchableOpacity>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
-        {/* </KeyboardAvoidingView> */}
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
 
         {/* 📅 5. 중첩 달력 모달 */}
         <Modal
@@ -732,7 +750,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF7096",
     width: "100%",
     paddingVertical: 16,
-    marginTop: 24,
+    marginTop: 30,
     borderRadius: 24,
   },
   cuteButtonText: { color: "#FFF", fontSize: 15, fontWeight: "800" },

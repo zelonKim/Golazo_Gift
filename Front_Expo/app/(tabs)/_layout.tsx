@@ -45,7 +45,7 @@ export default function TabLayout() {
     },
     es: {
       home: "Inicio",
-      people: "Personas", // 💡 Personas 대신 5글자로 압축!
+      people: "Conocides", // 💡 Personas 대신 5글자로 압축!
       recommend: "Ideas IA", // 💡 Recomendaciones 대신 8글자 꿀조합!
       history: "Historial",
       settings: "Ajustes", // 💡 Configuración 쓰면 무조건 UI 터집니다. Ajustes가 신의 한 수!

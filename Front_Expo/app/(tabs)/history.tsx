@@ -84,7 +84,7 @@ const translations = {
     sectionTitle: "Eventos pasados",
     budgetRangeLabel: "Rango de presupuesto",
     viewGiftsBtn: "Ver regalos", // 💡 깔끔하고 확실한 행동유도(CTA) 표현
-    emptyText: "Aún no tienes historial de recomendaciones.",
+    emptyText: "Aún no tienes historial de \n recomendaciones.",
     dateNotSet: "Sin fecha definida",
 
     // 삭제 컨펌 알림창
@@ -99,23 +99,24 @@ const translations = {
 
 // 🎯 백엔드 purpose 코드를 다국어 라벨로 즉시 치환해 줄 매직 딕셔너리!
 const PURPOSE_TRANSLATIONS: Record<string, { en: string; es: string }> = {
-  FRIEND_BDAY: { en: "Friend's BDay", es: "Cumple \n de amigo" },
+  FRIEND_BDAY: { en: "Friend's BDay", es: "Cumple \n de amistad" },
   LOVER_BDAY: { en: "Partner's BDay", es: "Cumple \n de mi pareja" },
-  PARENTS_BDAY: { en: "Parents' BDay", es: "Cumple \n de papás" },
+  PARENTS_BDAY: { en: "Parents' BDay", es: "Cumple \n de padres" },
   COUPLE_ANNIV: { en: "Couple Anniv", es: "Aniv. \n de novios" },
   WED_ANNIV: { en: "Wedding Anniv", es: "Aniv. \n de bodas" },
-  REYES_MAGOS: { en: "Three Kings", es: "Día de Reyes" }, // 👑 성진님의 잭팟 치트키!
-  GRADUATE: { en: "Graduation", es: "Graduación" },
-  EMPLOY: { en: "New Job", es: "Nuevo \n trabajo" },
   HOUSEWARMING: { en: "Housewarming", es: "Estrenar \n casa" },
   WEDDING: { en: "Wedding", es: "Boda" },
   BRIDAL_SHOWER: { en: "Bridal Shower", es: "Despedida" },
   BABY_SHOWER: { en: "Baby Shower", es: "Baby Shower" },
   BIRTH: { en: "New Baby", es: "Nacimiento" },
+  THANKS_GIVING: { en: "Thanksgiving", es: "Acción de Gracias" },
   CHRISTMAS: { en: "Christmas", es: "Navidad" },
+  REYES_MAGOS: { en: "Three Kings", es: "Día de Reyes" },
   VALENTINE: { en: "Valentine's", es: "San Valentín" },
   MOTHERS_DAY: { en: "Mother's Day", es: "Día de la Madre" },
   FATHERS_DAY: { en: "Father's Day", es: "Día del Padre" },
+  GRADUATE: { en: "Graduation", es: "Graduación" },
+  EMPLOY: { en: "New Job", es: "Nuevo \n trabajo" },
   THANK_YOU: { en: "Thank You", es: "Dar gracias" },
   GET_WELL: { en: "Get Well", es: "Recuperación" },
   SELF_GIFT: { en: "For Me", es: "Para mí" },
@@ -504,5 +505,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyText: { fontSize: 13, fontWeight: "600", color: "#AEAEB2" },
+  emptyText: {
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#AEAEB2",
+  },
 });

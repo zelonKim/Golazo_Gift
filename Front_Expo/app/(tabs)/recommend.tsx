@@ -86,7 +86,7 @@ const translations = {
 const getPurposeList = (lang: "en" | "es") => [
   {
     code: "FRIEND_BDAY",
-    label: lang === "es" ? "🎂 Cumple \n de amigo" : "🎂 Friend's BDay",
+    label: lang === "es" ? "🎂 Cumple \n de amistad" : "🎂 Friend's BDay",
   },
   {
     code: "LOVER_BDAY",
@@ -94,7 +94,7 @@ const getPurposeList = (lang: "en" | "es") => [
   }, // 💡 2030 스패니시 감성 'Cumple'
   {
     code: "PARENTS_BDAY",
-    label: lang === "es" ? "💐 Cumple \n de papás" : "💐 Parents' BDay",
+    label: lang === "es" ? "💐 Cumple \n de padres" : "💐 Parents' BDay",
   },
   {
     code: "COUPLE_ANNIV",
@@ -104,14 +104,7 @@ const getPurposeList = (lang: "en" | "es") => [
     code: "WED_ANNIV",
     label: lang === "es" ? "💍 Aniversario \n de bodas" : "💍 Wedding Anniv",
   }, // 💡 자수 조절용 약어(Aniv.) 센스
-  {
-    code: "GRADUATE",
-    label: lang === "es" ? "🎓 Graduación" : "🎓 Graduation",
-  },
-  {
-    code: "EMPLOY",
-    label: lang === "es" ? "💼 Nuevo \n trabajo" : "💼 New Job",
-  },
+
   {
     code: "HOUSEWARMING",
     label: lang === "es" ? "🏠 Estrenar \n casa" : "🏠 Housewarming",
@@ -126,6 +119,10 @@ const getPurposeList = (lang: "en" | "es") => [
     label: lang === "es" ? "🍼 Baby Shower" : "🍼 Baby Shower",
   }, // 💡 라틴아메리카 전역 및 미국 히스패닉들도 외래어로 그냥 씁니다!
   { code: "BIRTH", label: lang === "es" ? "👶 Nacimiento" : "👶 New Baby" },
+  {
+    code: "THANKS_GIVING",
+    label: lang === "es" ? "🦃 Acción de \n Gracias" : "🦃 Thanksgiving",
+  },
   { code: "CHRISTMAS", label: lang === "es" ? "🎄 Navidad" : "🎄 Christmas" },
   {
     code: "REYES_MAGOS",
@@ -144,6 +141,14 @@ const getPurposeList = (lang: "en" | "es") => [
     label: lang === "es" ? "👨 Día del Padre" : "👨 Father's Day",
   },
   {
+    code: "GRADUATE",
+    label: lang === "es" ? "🎓 Graduación" : "🎓 Graduation",
+  },
+  {
+    code: "EMPLOY",
+    label: lang === "es" ? "💼 Nuevo \n trabajo" : "💼 New Job",
+  },
+  {
     code: "THANK_YOU",
     label: lang === "es" ? "🙏 Dar gracias" : "🙏 Thank You",
   },
@@ -151,7 +156,10 @@ const getPurposeList = (lang: "en" | "es") => [
     code: "GET_WELL",
     label: lang === "es" ? "🩹 Recuperación" : "🩹 Get Well",
   },
-  { code: "SELF_GIFT", label: lang === "es" ? "🎁 Para mí" : "🎁 For Me" },
+  {
+    code: "SELF_GIFT",
+    label: lang === "es" ? "🎁 Para mí" : "🎁 Treat Myself",
+  },
 ];
 
 export default function RecommendScreen() {

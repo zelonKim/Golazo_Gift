@@ -408,12 +408,14 @@ export default function HomeScreen() {
                   <Text style={styles.bubbleTagText}>{t.upNext}</Text>
                 </View>
 
-                <Text style={styles.mainCardTitle}>{mainDDay.content} </Text>
                 <Text style={styles.mainCardDDay}>
                   <Text style={{ color: "#FF7096" }}>
                     {mainDDay.d_day === 0 ? t.ddayText : `D-${mainDDay.d_day}`}
                   </Text>
                 </Text>
+
+                <Text style={styles.mainCardTitle}>{mainDDay.content} </Text>
+
                 <TouchableOpacity
                   onPress={() => router.push("/(tabs)/recommend")}
                   style={styles.cuteButton}
@@ -705,19 +707,22 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginBottom: 12,
   },
-  bubbleTagText: { fontSize: 12, fontWeight: "700", color: "#FF7096" },
+  bubbleTagText: { fontSize: 11, fontWeight: "700", color: "#FF7096" },
   mainCardTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#2D2D3A",
     textAlign: "center",
-    marginTop: Platform.OS === "ios" ? 11 : 8,
+    marginTop: Platform.OS === "ios" ? 10 : 6,
+    borderBottomWidth: 4,
+    borderBottomColor: "#FFE3EB",
+    paddingBottom: 2,
   },
   mainCardDDay: {
     fontSize: 18,
     fontWeight: "700",
     color: "#757580",
-    marginTop: Platform.OS === "ios" ? 14 : 10,
+    marginTop: Platform.OS === "ios" ? 12 : 10,
     textAlign: "center",
   },
   cuteButton: {
@@ -730,7 +735,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     borderRadius: 24,
   },
-  cuteButtonText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+  cuteButtonText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
   sectionContainer: { marginTop: 20 },
   sectionHeader: {
     flexDirection: "row",
@@ -739,7 +744,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 4,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#2D2D3A" },
+  sectionTitle: { fontSize: 18, fontWeight: "600", color: "#2D2D3A" },
   addButton: {
     padding: 8,
     backgroundColor: "#FF7096",
@@ -765,7 +770,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginRight: 14,
   },
-  listItemName: { fontSize: 15, fontWeight: "700", color: "#2D2D3A" },
+  listItemName: { fontSize: 15, fontWeight: "500", color: "#2D2D3A" },
   listItemDate: { fontSize: 12, color: "#AEAEB2", marginTop: 3 },
   cuteDDayBadge: {
     backgroundColor: "#FFF0F3",

@@ -99,8 +99,8 @@ const translations = {
     headerTitle: "Mi perfil", // 💡 My Profile 매핑
     welcomeTag: "¡Hola! 👋", // 💡 입에 착 붙는 라틴계 첫인사 적용
     defaultNickname: "Define tu apodo",
-    statPerson: "persona",
-    statPeople: "personas",
+    statPerson: "conocide",
+    statPeople: "conocides",
     statEvent: "evento",
     statEvents: "eventos",
     statLovedOnes: "Seres queridos",
@@ -136,7 +136,7 @@ const translations = {
 
     deleteTitle: "⚠️ Eliminar cuenta",
     deleteConfirmMsg:
-      "¿De verdad quieres eliminar tu cuenta?\n\nTodos tus amigos registrados e historial de recomendaciones se borrarán permanentemente y no se podrán recuperar.",
+      "¿De verdad quieres eliminar tu cuenta?\n\nTodos tus amistads registrados e historial de recomendaciones se borrarán permanentemente y no se podrán recuperar.",
     deleteBtn: "Eliminar",
     deleteSuccessTitle: "Cuenta eliminada",
     deleteSuccessMsg:

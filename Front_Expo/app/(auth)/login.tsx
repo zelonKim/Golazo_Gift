@@ -55,6 +55,7 @@ const translations = {
     loginFailTitle: "Login Failed",
     loginFailMsg: "Please check your email or password again.",
     socialFailMsg: "Social authentication failed.",
+    appleLoginNotSupported: "Apple login is only supported on iOS devices.",
   },
   // 🇺🇸🇲🇽 미국 거주 히스패닉 유저들에게 가장 친숙한 앱 UI 전용 스페인어 셋
   es: {
@@ -73,6 +74,8 @@ const translations = {
     loginFailTitle: "Error de inicio de sesión",
     loginFailMsg: "Por favor, comprueba tu correo o contraseña.",
     socialFailMsg: "Error en la autenticación social.",
+    appleLoginNotSupported:
+      "El inicio de sesión con Apple solo es compatible con dispositivos iOS.",
   },
 };
 
@@ -201,6 +204,11 @@ export default function LoginScreen() {
 
   // 🍏 애플 로그인 연동
   const handleAppleLogin = async () => {
+    if (Platform.OS === "android") {
+      alert(t.appleLoginNotSupported);
+      return;
+    }
+
     try {
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [

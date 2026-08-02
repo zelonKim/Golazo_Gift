@@ -63,7 +63,7 @@ const translations = {
     notesInputLabel: "⭐️ Notes / Preferences (Optional)",
     notesPlaceholder: "e.g. Dislikes strong perfumes, owns a cat",
     saveBtn: "Save Changes",
-    addBtn: "Add Friend",
+    addBtn: "Add +",
 
     // 성별 / 나이대 UI 노출용 단어
     genderMaleShort: "Male",
@@ -102,7 +102,7 @@ const translations = {
 
     // 모달 타이틀 & 입력 라벨
     editTitle: "Editar información",
-    addTitle: "Agregar amigo",
+    addTitle: "Agregar conocide",
     nameLabel: "👋 Nombre / Apodo",
     namePlaceholder: "Ej. Mamá, Novio, Alex", // 💡 히스패닉 감성 맞춤 예시
     genderLabel: "🧬 Género",
@@ -116,7 +116,7 @@ const translations = {
     notesInputLabel: "⭐️ Notas / Preferencias (Opcional)",
     notesPlaceholder: "Ej. No le gustan los perfumes fuertes, tiene un gato",
     saveBtn: "Guardar cambios",
-    addBtn: "Agregar amigo",
+    addBtn: "Agregar +",
 
     // 성별 / 나이대 UI 노출용 단어
     genderMaleShort: "Hombre",
@@ -135,7 +135,7 @@ const translations = {
     addSuccessMsg: "Agregado con éxito a tu lista.",
     saveSuccessTitle: "Guardado",
     saveSuccessMsg: "Información actualizada con éxito.",
-    deleteTitle: "Eliminar amigo",
+    deleteTitle: "Eliminar conocide",
     deleteConfirm: '¿Estás seguro de que quieres eliminar a "{content}"?',
     deleteCancel: "Cancelar",
     deleteBtn: "Eliminar",
@@ -524,7 +524,9 @@ export default function RecipientScreen() {
               <Text style={[styles.emptyText, { fontSize: 17 }]}>
                 {t.noPeople}
               </Text>
-              <Text style={[styles.emptyText, { marginTop: -10 }]}>
+              <Text
+                style={[styles.emptyText, { marginTop: 15, fontWeight: "500" }]}
+              >
                 {t.noPeopleSub}
               </Text>
             </View>

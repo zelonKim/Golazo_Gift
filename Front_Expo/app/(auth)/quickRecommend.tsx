@@ -99,7 +99,7 @@ const translations = {
 const getPurposeOptions = (lang: "en" | "es") => [
   {
     value: "FRIEND_BDAY",
-    label: lang === "es" ? "Cumple amigo/a" : "Friend's BDay",
+    label: lang === "es" ? "Cumple amistad" : "Friend's BDay",
   },
   {
     value: "LOVER_BDAY",
@@ -107,7 +107,7 @@ const getPurposeOptions = (lang: "en" | "es") => [
   },
   {
     value: "PARENTS_BDAY",
-    label: lang === "es" ? "Cumple papás" : "Parents' BDay",
+    label: lang === "es" ? "Cumple padres" : "Parents' BDay",
   },
   {
     value: "COUPLE_ANNIV",

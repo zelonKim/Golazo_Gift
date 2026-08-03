@@ -1,12 +1,14 @@
 "use client";
 import { useTheme } from "@react-navigation/native";
 import * as Localization from "expo-localization";
+
 import { Tabs } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Gift, History, Home, Settings2, UserPlus } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -33,7 +35,8 @@ export default function TabLayout() {
     initLanguage();
   }, []);
 
-  // 🎯 탭바 밸런스를 절대 깨지 않는 초컴팩트 번역 딕셔너리
+
+
   const t = {
     en: {
       home: "Home",

@@ -2,6 +2,7 @@
 import { client } from "@/api/client";
 import { useTheme } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Localization from "expo-localization";
 import * as Notifications from "expo-notifications";
@@ -32,17 +33,6 @@ import {
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import messaging from '@react-native-firebase/messaging';
-
-
-// 🔔 알림이 들어왔을 때 OS가 알림을 화면에 어떻게 띄울지 핸들러 기본 설정
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 // 📅 달력 영어 글로벌 세팅
 LocaleConfig.locales["en"] = {
@@ -314,48 +304,33 @@ export default function HomeScreen() {
   // 💡 초동 로드 시 알림 권한 획득 및 토큰 추출 프로세스 기동
   useEffect(() => {
     async function setupNotifications() {
-      if (!Device.isDevice) {
-        console.log("➡️ 시뮬레이터 환경에서는 푸시 토큰 발급이 제한됩니다.");
-        return;
-      }
-
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== "granted") {
-        console.log("➡️ 사용자가 푸시 알림을 거부했습니다.");
-        return;
-      }
-
       try {
-        let pushToken = "";
-
-        if (Platform.OS === 'ios') {
-          // ⭕ iOS: React Native Firebase를 통해 실제 FCM 토큰 추출
-          await messaging().registerDeviceForRemoteMessages();
-          pushToken = await messaging().getToken();
-        } else {
-          // ⭕ Android: 기존처럼 getDevicePushTokenAsync 사용 (FCM 토큰 반환됨)
-          const tokenData = await Notifications.getDevicePushTokenAsync();
-          pushToken = tokenData.data;
+        if (!Device.isDevice) {
+          console.log("➡️ 시뮬레이터 환경에서는 푸시 토큰 발급이 제한됩니다.");
+          return;
         }
 
-        console.log("LOG 🔑 서버로 전달할 FCM 토큰:", pushToken);
-        savePushTokenMutation.mutate(pushToken);
+        const { status: existingStatus } =
+          await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
 
-        if (Platform.OS === "android") {
-          Notifications.setNotificationChannelAsync("default", {
-            name: "default",
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: "#FF7096",
+        if (existingStatus !== "granted") {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== "granted") {
+          console.log("➡️ 사용자가 푸시 알림을 거부했습니다.");
+          return;
+        }
+        try {
+          const tokenData = await Notifications.getExpoPushTokenAsync({
+            projectId: Constants?.expoConfig?.extra?.eas?.projectId,
           });
+          const pushToken = tokenData.data;
+          savePushTokenMutation.mutate(pushToken);
+        } catch (error) {
+          console.error("❌ 토큰 발급 에러:", error);
         }
       } catch (error) {
         console.error("❌ 토큰 발급 프로세스 도중 에러 발생:", error);
@@ -429,7 +404,18 @@ export default function HomeScreen() {
                   </Text>
                 </Text>
 
-                <Text style={styles.mainCardTitle}>{mainDDay.content} </Text>
+                <Text
+                  style={[
+                    styles.mainCardTitle,
+                    {
+                      borderBottomWidth: 4,
+                      borderBottomColor: "#FFE3EB",
+                      paddingBottom: 2,
+                    },
+                  ]}
+                >
+                  {mainDDay.content}
+                </Text>
 
                 <TouchableOpacity
                   onPress={() => router.push("/(tabs)/recommend")}
@@ -732,9 +718,6 @@ const styles = StyleSheet.create({
     color: "#2D2D3A",
     textAlign: "center",
     marginTop: Platform.OS === "ios" ? 10 : 6,
-    borderBottomWidth: 4,
-    borderBottomColor: "#FFE3EB",
-    paddingBottom: 2,
   },
   mainCardDDay: {
     fontSize: 18,

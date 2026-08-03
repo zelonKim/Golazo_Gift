@@ -8,8 +8,3 @@ class GiftConfig(AppConfig):
     def ready(self):
         pass
 
-    # def ready(self):
-    #     if os.environ.get("RUN_MAIN") == "true":
-    #         from .cron import start_scheduler
-
-    #         start_scheduler()

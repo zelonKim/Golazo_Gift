@@ -70,6 +70,8 @@ def send_expo_push_notification(user, token, title, body):
         print(f"❌ [네트워크 통신 에러 - {user.email}]: {e}")
 
 
+
+
 def check_anniversaries_and_notify():
     print("⏰ [배치 작업 시작] 기념일 및 디데이 체크 중...")
 
@@ -109,28 +111,28 @@ def check_anniversaries_and_notify():
     print("⏰ [배치 작업 완료] 모든 알림 발송 프로세스가 종료되었습니다.")
 
 
-def start_scheduler():
-    """
-    장고 앱 구동 시 스케줄러를 백그라운드에 등록해 주는 함수
-    """
-    us_eastern = pytz.timezone("America/New_York")
+# def start_scheduler():
+#     """
+#     장고 앱 구동 시 스케줄러를 백그라운드에 등록해 주는 함수
+#     """
+#     us_eastern = pytz.timezone("America/New_York")
 
-    scheduler = BackgroundScheduler(timezone=us_eastern)
+#     scheduler = BackgroundScheduler(timezone=us_eastern)
 
-    scheduler.add_jobstore(DjangoJobStore(), "default")
+#     scheduler.add_jobstore(DjangoJobStore(), "default")
 
-    scheduler.add_job(
-        check_anniversaries_and_notify,
-        # trigger="cron",
-        # hour=11,
-        # minute=0,
-        trigger="interval",
-        seconds=20,  # 테스트용 20초 주기
-        timezone=us_eastern,
-        id="check_anniversaries_job",
-        max_instances=1,
-        replace_existing=True,
-    )
+#     scheduler.add_job(
+#         check_anniversaries_and_notify,
+#         # trigger="cron",
+#         # hour=11,
+#         # minute=0,
+#         trigger="interval",
+#         seconds=20,  # 테스트용 20초 주기
+#         timezone=us_eastern,
+#         id="check_anniversaries_job",
+#         max_instances=1,
+#         replace_existing=True,
+#     )
 
-    register_events(scheduler)
-    scheduler.start()
+#     register_events(scheduler)
+#     scheduler.start()

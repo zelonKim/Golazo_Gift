@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from gift.cron import check_anniversaries_and_notify
 
 
+
 class Command(BaseCommand):
     help = "20초 간격 푸시 알림 테스트 실행"
 

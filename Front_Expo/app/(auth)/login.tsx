@@ -1,6 +1,8 @@
 "use client";
 import { client } from "@/api/client";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useMutation } from "@tanstack/react-query";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -20,9 +22,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import * as AppleAuthentication from "expo-apple-authentication";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -191,13 +191,13 @@ export default function LoginScreen() {
           token: idToken,
         });
       } else {
-        Alert.alert("오류", "구글 인증 토큰을 가져오지 못했습니다.");
+        Alert.alert("Error", "Can not retrieve Google ID token.");
       }
     } catch (error: any) {
       console.error("구글 로그인 에러:", error);
       // 사용자가 취소한 게 아니라면 에러 알림
       if (error.code !== "ASYNC_OP_IN_PROGRESS") {
-        Alert.alert("구글 로그인 실패", "로그인 도중 오류가 발생했습니다.");
+        Alert.alert("Error", "Failed to log in with Google.");
       }
     }
   };
@@ -224,120 +224,126 @@ export default function LoginScreen() {
           token: credential.identityToken,
         });
       } else {
-        Alert.alert("오류", "애플 인증 토큰을 가져오지 못했습니다.");
+        Alert.alert("Error", "Can not retrieve Apple identity token.");
       }
     } catch (error: any) {
-      console.error("애플 로그인 에러:", error);
       if (error.code !== "ERR_REQUEST_CANCELED") {
-        Alert.alert("애플 로그인 실패", "로그인 도중 오류가 발생했습니다.");
+        Alert.alert("Error", "Failed to log in with Apple.");
       }
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.content}>
-          {/* 상단 인트로 타이틀 */}
-          <View style={styles.welcomeSection}>
-            <Text style={styles.subTitle}>{t.subTitle}</Text>
-            <Text style={styles.mainTitle}>Golazo Gift</Text>
-          </View>
-
-          {/* 폼 영역 */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputWrapper}>
-              <Mail size={18} color="#FF7096" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder={t.emailPlaceholder}
-                placeholderTextColor="#AEAEB2"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? -200 : -190}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.content}>
+            {/* 상단 인트로 타이틀 */}
+            <View style={styles.welcomeSection}>
+              <Text style={styles.subTitle}>{t.subTitle}</Text>
+              <Text style={styles.mainTitle}>Golazo Gift</Text>
             </View>
 
-            <View style={styles.inputWrapper}>
-              <Lock size={18} color="#FF7096" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder={t.passwordPlaceholder}
-                placeholderTextColor="#AEAEB2"
-                secureTextEntry
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
-          </View>
-
-          {/* 로그인 하기 버튼 */}
-          <TouchableOpacity
-            style={[
-              styles.cuteButton,
-              (loginMutation.isPending || socialLoginMutation.isPending) &&
-                styles.disabledButton,
-            ]}
-            onPress={handleLogin}
-            disabled={loginMutation.isPending || socialLoginMutation.isPending}
-          >
-            {loginMutation.isPending || socialLoginMutation.isPending ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.cuteButtonText}>{t.loginBtn}</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* 회원가입 유도 영역 */}
-          <View style={styles.signupLink}>
-            <Text style={styles.signupLinkText}>{t.noAccount}</Text>
-            <TouchableOpacity onPress={() => router.push("./signup")}>
-              <Text style={styles.signupLinkTextBold}>{t.signUp}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* 소셜 로그인 버튼 영역 */}
-          <View style={styles.socialSection}>
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t.divider}</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {socialLoginMutation.isPending ? (
-              <ActivityIndicator color="#FF7096" size="large" />
-            ) : (
-              <View style={styles.socialButtonRow}>
-                {/* 구글 로그인 */}
-                <TouchableOpacity onPress={handleGoogleLogin}>
-                  <Image
-                    source={require("@/assets/images/google_login.png")}
-                    style={styles.googleIcon}
-                  />
-                </TouchableOpacity>
-
-                {/* 애플 로그인 */}
-                <TouchableOpacity onPress={handleAppleLogin}>
-                  <Image
-                    source={require("@/assets/images/apple_login.png")}
-                    style={styles.appleIcon}
-                  />
-                </TouchableOpacity>
+            {/* 폼 영역 */}
+            <View style={styles.formContainer}>
+              <View style={styles.inputWrapper}>
+                <Mail size={18} color="#FF7096" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t.emailPlaceholder}
+                  placeholderTextColor="#AEAEB2"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
               </View>
-            )}
 
-            {/* 게스트 로그인 */}
+              <View style={styles.inputWrapper}>
+                <Lock size={18} color="#FF7096" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t.passwordPlaceholder}
+                  placeholderTextColor="#AEAEB2"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
+            </View>
+
+            {/* 로그인 하기 버튼 */}
             <TouchableOpacity
-              style={styles.guestButton}
-              onPress={() => router.replace("/quickRecommend")}
+              style={[
+                styles.cuteButton,
+                (loginMutation.isPending || socialLoginMutation.isPending) &&
+                  styles.disabledButton,
+              ]}
+              onPress={handleLogin}
+              disabled={
+                loginMutation.isPending || socialLoginMutation.isPending
+              }
             >
-              <Text style={styles.guestButtonText}>{t.guestBtn}</Text>
+              {loginMutation.isPending || socialLoginMutation.isPending ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.cuteButtonText}>{t.loginBtn}</Text>
+              )}
             </TouchableOpacity>
+
+            {/* 회원가입 유도 영역 */}
+            <View style={styles.signupLink}>
+              <Text style={styles.signupLinkText}>{t.noAccount}</Text>
+              <TouchableOpacity onPress={() => router.push("./signup")}>
+                <Text style={styles.signupLinkTextBold}>{t.signUp}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 소셜 로그인 버튼 영역 */}
+            <View style={styles.socialSection}>
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>{t.divider}</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {socialLoginMutation.isPending ? (
+                <ActivityIndicator color="#FF7096" size="large" />
+              ) : (
+                <View style={styles.socialButtonRow}>
+                  {/* 구글 로그인 */}
+                  <TouchableOpacity onPress={handleGoogleLogin}>
+                    <Image
+                      source={require("@/assets/images/google_login.png")}
+                      style={styles.googleIcon}
+                    />
+                  </TouchableOpacity>
+
+                  {/* 애플 로그인 */}
+                  <TouchableOpacity onPress={handleAppleLogin}>
+                    <Image
+                      source={require("@/assets/images/apple_login.png")}
+                      style={styles.appleIcon}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {/* 게스트 로그인 */}
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={() => router.replace("/quickRecommend")}
+              >
+                <Text style={styles.guestButtonText}>{t.guestBtn}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

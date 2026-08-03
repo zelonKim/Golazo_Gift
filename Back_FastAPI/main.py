@@ -74,6 +74,8 @@ async def get_recommendation(request: RecommendRequest):
         response = await client.beta.chat.completions.parse(
             model="gpt-4o-mini",
             temperature=0.8,
+            presence_penalty=0.6,
+            frequency_penalty=0.3,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

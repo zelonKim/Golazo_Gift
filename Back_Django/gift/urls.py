@@ -49,14 +49,14 @@ urlpatterns = [
         RecommendedProductDetailView.as_view(),
         name="recommended-product_delete",
     ),
-    # 4. 기념일 메모 CRUD
+    # 기념일 메모 CRUD
     path("date-memo/", DateMemoView.as_view(), name="date-memo_list_create"),
     path(
         "date-memo/<int:memo_id>/",
         DateMemoDetailView.as_view(),
         name="date-memo_read_update_delete",
     ),
-    # 5. 빠른 선물 추천
+    # 빠른 선물 추천
     path(
         "quick/recommend/",
         GiftQuickRecommendView.as_view(),

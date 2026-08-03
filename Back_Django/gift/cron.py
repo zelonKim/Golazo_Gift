@@ -3,8 +3,6 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 import requests
 from .models import DateMemo
-from apscheduler.schedulers.background import BackgroundScheduler
-from django_apscheduler.jobstores import DjangoJobStore, register_events
 import pytz
 
 User = get_user_model()

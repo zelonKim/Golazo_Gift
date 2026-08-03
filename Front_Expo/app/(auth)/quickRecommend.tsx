@@ -1,6 +1,5 @@
 "use client";
 import { client } from "@/api/client";
-import Slider from "@react-native-community/slider";
 import { useMutation } from "@tanstack/react-query";
 import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
@@ -20,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -41,7 +41,7 @@ const translations = {
     mainTitle: "Custom ",
     mainTitleHighlight: "AI Gift Picks",
     subTitle:
-      "Tell us about the recipient,\nand our AI will find the perfect gift! 🤖",
+      "Tell us about the recipient,\n And our AI will find the perfect gift! 🤖",
 
     // 세션 라벨들
     labelOccasion: "🥳 Gift Occasion",
@@ -49,26 +49,32 @@ const translations = {
     labelGender: "🧬 Gender",
     labelHobbies: "🎨 Hobbies & Interests (Optional)",
     labelNotes: "⭐️ Important Notes (Optional)",
-    labelMinBudget: "🪙 Min Budget",
-    labelMaxBudget: "💎 Max Budget",
+    labelBudget: "🪙 Budget Range ($)",
 
     // 인풋 플레이스홀더
     placeholderHobbies: "e.g. Reading, Hiking, Coffee brewing",
     placeholderNotes: "e.g. Dislikes perfumes, loves cats, allergic to nuts",
+    minBudgetPlaceholder: "Min budget",
+    maxBudgetPlaceholder: "Max budget",
 
     // 버튼 및 로딩 텍스트
     submitBtn: "Get Gift Recommendations 🤖",
     loadingBtn: "AI is picking the gifts...",
 
-    // 에러 핸들링
+    // 에러 및 유효성 검증 메시지
+    requiredTitle: "Required",
+    requiredMinBudget: "Please set a minimum budget.",
+    requiredMaxBudget: "Please set a maximum budget.",
+    budgetErrorTitle: "Check Budget",
+    budgetErrorMsg: "Minimum budget cannot exceed maximum budget.",
     errorTitle: "Error 😢",
     errorMsg:
       "Failed to connect with the AI engine. Please try again in a moment.",
   },
   es: {
-    headerTitle: " ✏️ Ingresa datos", // 💡 간결하고 직관적인 '데이터 입력'
+    headerTitle: " ✏️ Ingresa datos",
     mainTitle: "Regalos ",
-    mainTitleHighlight: "IA a tu medida", // 💡 2030 라틴 감성에 맞춘 세련된 문구
+    mainTitleHighlight: "IA a tu medida",
     subTitle:
       "Cuéntanos sobre esa persona,\n¡y la IA encontrará el regalo ideal! 🤖",
 
@@ -78,18 +84,24 @@ const translations = {
     labelGender: "🧬 Género",
     labelHobbies: "🎨 Hobbies e intereses (Opcional)",
     labelNotes: "⭐️ Notas importantes (Opcional)",
-    labelMinBudget: "🪙 Presupuesto mín.",
-    labelMaxBudget: "💎 Presupuesto máx.",
+    labelBudget: "🪙 Rango de presupuesto ($)",
 
     // 인풋 플레이스홀더
     placeholderHobbies: "Ej. Lectura, senderismo, café",
     placeholderNotes: "Ej. No le gustan los perfumes, ama los gatos, etc.",
+    minBudgetPlaceholder: "Mínimo",
+    maxBudgetPlaceholder: "Máximo",
 
     // 버튼 및 로딩 텍스트
     submitBtn: "Buscar recomendaciones 🤖",
-    loadingBtn: "La IA está buscando regalos..",
+    loadingBtn: "Está buscando regalos..",
 
-    // 에러 핸들링
+    // 에러 및 유효성 검증 메시지
+    requiredTitle: "Obligatorio",
+    requiredMinBudget: "Por favor, ingresa un presupuesto mínimo.",
+    requiredMaxBudget: "Por favor, ingresa un presupuesto máximo.",
+    budgetErrorTitle: "Revisar presupuesto",
+    budgetErrorMsg: "El presupuesto mínimo no puede ser mayor que el máximo.",
     errorTitle: "Error 😢",
     errorMsg: "No se pudo conectar con el motor de IA. Inténtalo de nuevo.",
   },
@@ -117,7 +129,6 @@ const getPurposeOptions = (lang: "en" | "es") => [
     value: "WED_ANNIV",
     label: lang === "es" ? "Aniv. de bodas" : "Wedding Anniv",
   },
-
   {
     value: "HOUSEWARMING",
     label: lang === "es" ? "Estrenar casa" : "Housewarming",
@@ -243,8 +254,25 @@ export default function QuickRecommendScreen() {
   const [hobbies, setHobbies] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [minBudget, setMinBudget] = useState(0);
-  const [maxBudget, setMaxBudget] = useState(300);
+  // 💰 예산 입력 상태 (숫자/문자열)
+  const [minBudget, setMinBudget] = useState<number | string>("");
+  const [maxBudget, setMaxBudget] = useState<number | string>("");
+
+  // 1. 숫자 또는 문자열을 천 단위 쉼표가 붙은 문자열로 변환 (화면 표시용)
+  const toDisplayValue = (value: number | string) => {
+    if (value === 0 || value === "0") return "";
+    const num = String(value).replace(/[^0-9]/g, "");
+    return num ? Number(value).toLocaleString() : "";
+  };
+
+  // 2. 입력된 문자열에서 쉼표를 제거하고 최대 $999,999 제한을 걸어 숫자로 변환 (State 저장용)
+  const toRawNumber = (text: string) => {
+    const cleanNumber = text.replace(/[^0-9]/g, "");
+    if (!cleanNumber) return 0;
+
+    const num = Number(cleanNumber);
+    return num > 999999 ? 999999 : num;
+  };
 
   const { mutate, isPending } = useMutation({
     mutationFn: fetchQuickRecommendation,
@@ -262,21 +290,32 @@ export default function QuickRecommendScreen() {
   });
 
   const handleSubmit = () => {
+    if (!minBudget) {
+      Alert.alert(t.requiredTitle, t.requiredMinBudget);
+      return;
+    }
+
+    if (!maxBudget) {
+      Alert.alert(t.requiredTitle, t.requiredMaxBudget);
+      return;
+    }
+
+    if (Number(minBudget) > Number(maxBudget)) {
+      Alert.alert(t.budgetErrorTitle, t.budgetErrorMsg);
+      return;
+    }
+
     const payload: RecommendRequest = {
       purpose,
       age_group: ageGroup,
       gender,
-      min_budget: minBudget,
-      max_budget: maxBudget,
+      min_budget: Number(minBudget),
+      max_budget: Number(maxBudget),
       hobbies: hobbies.trim() || null,
       notes: notes.trim() || null,
     };
 
     mutate(payload);
-  };
-
-  const formatPrice = (num: number) => {
-    return "$" + num.toLocaleString();
   };
 
   const renderOptionSelector = (
@@ -288,6 +327,7 @@ export default function QuickRecommendScreen() {
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.chipScroll}
+      keyboardShouldPersistTaps="handled"
     >
       {options.map((opt) => {
         const isSelected = currentValue === opt.value;
@@ -310,270 +350,298 @@ export default function QuickRecommendScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 🌟 헤더 영역 */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.replace("/login")}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={24} color="#334155" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t.headerTitle}</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <View style={styles.welcomeSection}>
-          <Text style={styles.mainTitle}>
-            {t.mainTitle}
-            <Text style={styles.highlightText}>{t.mainTitleHighlight}</Text>
-          </Text>
-          <Text style={styles.subTitle}>{t.subTitle}</Text>
-        </View>
-
-        {/* 메인 폼 카드 */}
-        <View style={styles.card}>
-          {/* 1. 선물 목적 */}
-          <View style={[styles.inputGroup, { marginTop: 8 }]}>
-            <Text style={styles.label}>{t.labelOccasion}</Text>
-            {renderOptionSelector(getPurposeOptions(lang), purpose, setPurpose)}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 🌟 헤더 영역 */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.replace("/login")}
+              style={styles.backButton}
+            >
+              <ArrowLeft size={24} color="#334155" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t.headerTitle}</Text>
+            <View style={{ width: 36 }} />
           </View>
 
-          {/* 2. 연령대 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.labelAgeGroup}</Text>
-            {renderOptionSelector(getAgeOptions(lang), ageGroup, setAgeGroup)}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.mainTitle}>
+              {t.mainTitle}
+              <Text style={styles.highlightText}>{t.mainTitleHighlight}</Text>
+            </Text>
+            <Text style={styles.subTitle}>{t.subTitle}</Text>
           </View>
 
-          {/* 3. 성별 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.labelGender}</Text>
-            <View style={styles.genderRow}>
-              {renderOptionSelector(getGenderOptions(lang), gender, setGender)}
+          {/* 메인 폼 카드 */}
+          <View style={styles.card}>
+            {/* 1. 선물 목적 */}
+            <View style={[styles.inputGroup, { marginTop: 8 }]}>
+              <Text style={styles.label}>{t.labelOccasion}</Text>
+              {renderOptionSelector(
+                getPurposeOptions(lang),
+                purpose,
+                setPurpose,
+              )}
             </View>
-          </View>
 
-          {/* 4. 취미 및 관심사 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.labelHobbies}</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder={t.placeholderHobbies}
-              placeholderTextColor="#CBD5E1"
-              value={hobbies}
-              onChangeText={setHobbies}
-            />
-          </View>
+            {/* 2. 연령대 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t.labelAgeGroup}</Text>
+              {renderOptionSelector(getAgeOptions(lang), ageGroup, setAgeGroup)}
+            </View>
 
-          {/* 5. 특이사항 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.labelNotes}</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              placeholder={t.placeholderNotes}
-              placeholderTextColor="#CBD5E1"
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </View>
-
-          {/* 6. 예산 슬라이더 섹션 */}
-          <View style={styles.budgetContainer}>
-            {/* 최소 예산 */}
-            <View style={styles.budgetWrapper}>
-              <View style={styles.budgetTextRow}>
-                <Text style={styles.budgetLabel}>{t.labelMinBudget}</Text>
-                <Text style={styles.budgetValueBadge}>
-                  {formatPrice(minBudget)}
-                </Text>
+            {/* 3. 성별 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t.labelGender}</Text>
+              <View style={styles.genderRow}>
+                {renderOptionSelector(
+                  getGenderOptions(lang),
+                  gender,
+                  setGender,
+                )}
               </View>
-              <Slider
-                style={styles.slider}
-                minimumValue={0}
-                maximumValue={300}
-                step={10}
-                value={minBudget}
-                onValueChange={(val) => {
-                  if (val <= maxBudget) setMinBudget(val);
-                }}
-                minimumTrackTintColor="#FF7096"
-                maximumTrackTintColor="#E2E8F0"
-                thumbTintColor="#FF7096"
+            </View>
+
+            {/* 4. 취미 및 관심사 */}
+            <View style={[styles.inputGroup, { marginTop: 8 }]}>
+              <Text style={styles.label}>{t.labelHobbies}</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder={t.placeholderHobbies}
+                placeholderTextColor="#CBD5E1"
+                value={hobbies}
+                onChangeText={setHobbies}
               />
             </View>
 
-            {/* 최대 예산 */}
-            <View style={styles.budgetWrapper}>
-              <View style={styles.budgetTextRow}>
-                <Text style={styles.budgetLabel}>{t.labelMaxBudget}</Text>
-                <Text style={[styles.budgetValueBadge, { color: "#E11D48" }]}>
-                  {maxBudget >= 300 ? "$300+" : formatPrice(maxBudget)}
-                </Text>
-              </View>
-              <Slider
-                style={styles.slider}
-                minimumValue={10}
-                maximumValue={300}
-                step={10}
-                value={maxBudget}
-                onValueChange={(val) => {
-                  if (val >= minBudget) setMaxBudget(val);
-                }}
-                minimumTrackTintColor="#F43F5E"
-                maximumTrackTintColor="#E2E8F0"
-                thumbTintColor="#F43F5E"
+            {/* 5. 특이사항 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t.labelNotes}</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                placeholder={t.placeholderNotes}
+                placeholderTextColor="#CBD5E1"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                value={notes}
+                onChangeText={setNotes}
               />
             </View>
-          </View>
 
-          {/* 제출 버튼 */}
-          <TouchableOpacity
-            style={[styles.submitButton, isPending && styles.disabledButton]}
-            onPress={handleSubmit}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <View style={styles.loadingRow}>
-                <Text style={styles.submitButtonText}>{t.loadingBtn}</Text>
-                <SpinningGift />
+            {/* 6. 예산 범위 설정 (인풋 스타일) */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t.labelBudget}</Text>
+              <View style={styles.budgetRow}>
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <TextInput
+                    style={styles.budgetTextInput}
+                    placeholder={t.minBudgetPlaceholder}
+                    placeholderTextColor="#AEAEB2"
+                    keyboardType="number-pad"
+                    value={toDisplayValue(minBudget)}
+                    onChangeText={(text) => setMinBudget(toRawNumber(text))}
+                  />
+                </View>
+
+                <Text style={styles.budgetBetween}>-</Text>
+
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <TextInput
+                    style={styles.budgetTextInput}
+                    placeholder={t.maxBudgetPlaceholder}
+                    placeholderTextColor="#AEAEB2"
+                    keyboardType="number-pad"
+                    value={toDisplayValue(maxBudget)}
+                    onChangeText={(text) => setMaxBudget(toRawNumber(text))}
+                  />
+                </View>
               </View>
-            ) : (
-              <Text style={styles.submitButtonText}>{t.submitBtn}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            </View>
+
+            {/* 제출 버튼 */}
+            <TouchableOpacity
+              style={[styles.submitButton, isPending && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <View style={styles.loadingRow}>
+                  <Text style={styles.submitButtonText}>{t.loadingBtn}</Text>
+                  <SpinningGift />
+                </View>
+              ) : (
+                <Text style={styles.submitButtonText}>{t.submitBtn}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFBFB" },
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    height: 56,
+    justifyContent: "space-around",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    marginBottom: 20,
+    marginHorizontal: 10,
   },
-  backButton: { padding: 8 },
+  backButton: {
+    padding: 4,
+  },
   headerTitle: {
-    marginRight: 16,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#334155",
+    color: "#1E293B",
   },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
-  welcomeSection: { alignItems: "center", marginTop: 12, marginBottom: 24 },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 10,
+  },
+  welcomeSection: {
+    marginBottom: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    textAlign: "center",
+  },
   mainTitle: {
-    fontSize: 25,
-    fontWeight: Platform.OS === "ios" ? "800" : "700",
+    fontSize: 24,
+    fontWeight: "800",
     color: "#0F172A",
+    marginBottom: 6,
   },
-  highlightText: { color: "#FF7096" },
+  highlightText: {
+    color: "#FF7096",
+  },
   subTitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#64748B",
-    marginTop: 8,
+    lineHeight: 20,
     textAlign: "center",
   },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    padding: 18,
-    shadowColor: "#FFCCD8",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 4,
-    marginTop: 2,
-  },
-  inputGroup: { marginBottom: Platform.OS === "ios" ? 36 : 28 },
-  label: {
-    fontSize: Platform.OS === "ios" ? 13 : 12.5,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 10,
-    marginLeft: 2,
-  },
-  chipScroll: { flexDirection: "row" },
-  chip: {
-    backgroundColor: "#F8FAFC",
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 14,
+    borderColor: "#F1F5F9",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  inputGroup: {
+    marginBottom: Platform.OS === "ios" ? 32 : 28,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#334155",
+    marginBottom: 10,
+  },
+  chipScroll: {
+    flexDirection: "row",
+  },
+  chip: {
+    backgroundColor: "#F1F5F9",
     paddingHorizontal: 16,
     paddingVertical: 10,
+    borderRadius: 12,
     marginRight: 8,
   },
-  chipSelected: { backgroundColor: "#FFECF0", borderColor: "#FF7096" },
+  chipSelected: {
+    backgroundColor: "#FF7096",
+  },
   chipText: {
-    fontSize: Platform.OS === "ios" ? 13 : 12,
+    fontSize: 13,
     fontWeight: "600",
     color: "#64748B",
   },
-  chipTextSelected: { color: "#FF7096", fontWeight: "700" },
-  genderRow: { flexDirection: "row", gap: 10 },
+  chipTextSelected: {
+    color: "#FFFFFF",
+  },
+  genderRow: {
+    flexDirection: "row",
+  },
   textInput: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 14,
     paddingHorizontal: 16,
-    height: 48,
-    fontSize: Platform.OS === "ios" ? 13 : 12,
-    color: "#334155",
-    fontWeight: "500",
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#1E293B",
   },
-  textArea: { height: 90, paddingTop: 12, paddingBottom: 12 },
-  budgetContainer: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+  textArea: {
+    height: 80,
+    paddingTop: 12,
   },
-  budgetWrapper: { marginBottom: 16 },
-  budgetTextRow: {
+  // 💰 예산 입력 필드 스타일
+  budgetRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
   },
-  budgetLabel: { fontSize: 12.5, fontWeight: "600", color: "#64748B" },
-  budgetValueBadge: {
-    fontSize: 12.5,
-    fontWeight: "800",
-    color: "#FF7096",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    overflow: "hidden",
+    paddingHorizontal: 16,
+    height: 48,
   },
-  slider: { width: "100%", height: 40 },
+  budgetTextInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E293B",
+  },
+  budgetBetween: {
+    marginHorizontal: 10,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#94A3B8",
+  },
   submitButton: {
     backgroundColor: "#FF7096",
+    height: 52,
     borderRadius: 16,
-    height: 56,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#FFCCD8",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 3,
+    marginTop: 8,
   },
-  disabledButton: { backgroundColor: "#FFAEC4" },
-  submitButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
-  loadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  disabledButton: {
+    backgroundColor: "#FDA4AF",
+  },
+  submitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
 });

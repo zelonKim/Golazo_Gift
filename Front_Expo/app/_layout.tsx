@@ -18,6 +18,7 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -26,6 +27,7 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -43,6 +45,7 @@ export default function RootLayout() {
       });
     }
   }, []);
+
 
   useEffect(() => {
     if (error) throw error;

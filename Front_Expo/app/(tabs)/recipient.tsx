@@ -21,7 +21,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -541,183 +541,186 @@ export default function RecipientScreen() {
         visible={isFormModalVisible}
         onRequestClose={closeFormModal}
       >
-        {/* <KeyboardAvoidingView
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={-30}
-        > */}
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.modalOverlay}>
-            <ScrollView
-              contentContainerStyle={styles.modalScrollContainer}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>
-                    {editingRecipient ? t.editTitle : t.addTitle}
-                  </Text>
-                  <TouchableOpacity onPress={closeFormModal}>
-                    <X size={20} color="#AEAEB2" />
-                  </TouchableOpacity>
-                </View>
+          keyboardVerticalOffset={Platform.OS === "ios" ? -30 : -40}
+        >
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
+            <View style={styles.modalOverlay}>
+              <ScrollView
+                contentContainerStyle={styles.modalScrollContainer}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalHeaderTitle}>
+                      {editingRecipient ? t.editTitle : t.addTitle}
+                    </Text>
+                    <TouchableOpacity onPress={closeFormModal}>
+                      <X size={20} color="#AEAEB2" />
+                    </TouchableOpacity>
+                  </View>
 
-                {/* 필드 1: 이름 */}
-                <Text style={styles.inputLabel}>{t.nameLabel}</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={t.namePlaceholder}
-                    placeholderTextColor="#AEAEB2"
-                    value={name}
-                    onChangeText={setName}
-                  />
-                </View>
+                  {/* 필드 1: 이름 */}
+                  <Text style={styles.inputLabel}>{t.nameLabel}</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder={t.namePlaceholder}
+                      placeholderTextColor="#AEAEB2"
+                      value={name}
+                      onChangeText={setName}
+                    />
+                  </View>
 
-                {/* 필드 2: 성별 */}
-                <Text style={styles.inputLabel}>{t.genderLabel}</Text>
-                <View style={[styles.gridContainer, { marginBottom: 16 }]}>
-                  <TouchableOpacity
-                    style={[
-                      styles.gridBadge,
-                      { width: "48%" },
-                      gender === "M" && styles.choiceBadgeSelected,
-                    ]}
-                    onPress={() => setGender("M")}
-                  >
-                    <Text
-                      style={[
-                        styles.gridBadgeText,
-                        gender === "M" && { color: "white" },
-                      ]}
-                    >
-                      {t.genderM}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.gridBadge,
-                      { width: "48%" },
-                      gender === "F" && styles.choiceBadgeSelected,
-                    ]}
-                    onPress={() => setGender("F")}
-                  >
-                    <Text
-                      style={[
-                        styles.gridBadgeText,
-                        gender === "F" && { color: "white" },
-                      ]}
-                    >
-                      {t.genderF}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.gridBadge,
-                      { width: "48%", marginTop: 6 },
-                      gender === "N" && styles.choiceBadgeSelected,
-                    ]}
-                    onPress={() => setGender("N")}
-                  >
-                    <Text
-                      style={[
-                        styles.gridBadgeText,
-                        gender === "N" && { color: "white" },
-                      ]}
-                    >
-                      {t.genderN}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.gridBadge,
-                      { width: "48%", marginTop: 6 },
-                      gender === "P" && styles.choiceBadgeSelected,
-                    ]}
-                    onPress={() => setGender("P")}
-                  >
-                    <Text
-                      style={[
-                        styles.gridBadgeText,
-                        gender === "P" && { color: "white" },
-                      ]}
-                    >
-                      {t.genderP}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 필드 3: 나이대 */}
-                <Text style={styles.inputLabel}>{t.ageLabel}</Text>
-                <View style={styles.gridContainer}>
-                  {ageGroups.map((age) => (
+                  {/* 필드 2: 성별 */}
+                  <Text style={styles.inputLabel}>{t.genderLabel}</Text>
+                  <View style={[styles.gridContainer, { marginBottom: 16 }]}>
                     <TouchableOpacity
-                      key={age}
                       style={[
                         styles.gridBadge,
-                        ageGroup === age && styles.choiceBadgeSelected,
+                        { width: "48%" },
+                        gender === "M" && styles.choiceBadgeSelected,
                       ]}
-                      onPress={() => setAgeGroup(age)}
+                      onPress={() => setGender("M")}
                     >
                       <Text
                         style={[
                           styles.gridBadgeText,
-                          ageGroup === age && { color: "white" },
+                          gender === "M" && { color: "white" },
                         ]}
                       >
-                        {age}
+                        {t.genderM}
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.gridBadge,
+                        { width: "48%" },
+                        gender === "F" && styles.choiceBadgeSelected,
+                      ]}
+                      onPress={() => setGender("F")}
+                    >
+                      <Text
+                        style={[
+                          styles.gridBadgeText,
+                          gender === "F" && { color: "white" },
+                        ]}
+                      >
+                        {t.genderF}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.gridBadge,
+                        { width: "48%", marginTop: 6 },
+                        gender === "N" && styles.choiceBadgeSelected,
+                      ]}
+                      onPress={() => setGender("N")}
+                    >
+                      <Text
+                        style={[
+                          styles.gridBadgeText,
+                          gender === "N" && { color: "white" },
+                        ]}
+                      >
+                        {t.genderN}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.gridBadge,
+                        { width: "48%", marginTop: 6 },
+                        gender === "P" && styles.choiceBadgeSelected,
+                      ]}
+                      onPress={() => setGender("P")}
+                    >
+                      <Text
+                        style={[
+                          styles.gridBadgeText,
+                          gender === "P" && { color: "white" },
+                        ]}
+                      >
+                        {t.genderP}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {/* 필드 5: 취미 */}
-                <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                  {t.hobbiesInputLabel}
-                </Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={t.hobbiesPlaceholder}
-                    placeholderTextColor="#AEAEB2"
-                    value={hobbies}
-                    onChangeText={setHobbies}
-                  />
-                </View>
+                  {/* 필드 3: 나이대 */}
+                  <Text style={styles.inputLabel}>{t.ageLabel}</Text>
+                  <View style={styles.gridContainer}>
+                    {ageGroups.map((age) => (
+                      <TouchableOpacity
+                        key={age}
+                        style={[
+                          styles.gridBadge,
+                          ageGroup === age && styles.choiceBadgeSelected,
+                        ]}
+                        onPress={() => setAgeGroup(age)}
+                      >
+                        <Text
+                          style={[
+                            styles.gridBadgeText,
+                            ageGroup === age && { color: "white" },
+                          ]}
+                        >
+                          {age}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-                {/* 필드 6: 특이사항 */}
-                <Text style={styles.inputLabel}>{t.notesInputLabel}</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    { height: 80, alignItems: "flex-start", paddingTop: 12 },
-                  ]}
-                >
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={t.notesPlaceholder}
-                    placeholderTextColor="#AEAEB2"
-                    multiline
-                    numberOfLines={3}
-                    value={notes}
-                    onChangeText={setNotes}
-                  />
-                </View>
-
-                {/* 최종 제출 버튼 */}
-                <TouchableOpacity
-                  style={styles.modalSubmitButton}
-                  onPress={handleSave}
-                >
-                  <Text style={styles.modalSubmitButtonText}>
-                    {editingRecipient ? t.saveBtn : t.addBtn}
+                  {/* 필드 5: 취미 */}
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                    {t.hobbiesInputLabel}
                   </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </TouchableWithoutFeedback>
-        {/* </KeyboardAvoidingView> */}
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder={t.hobbiesPlaceholder}
+                      placeholderTextColor="#AEAEB2"
+                      value={hobbies}
+                      onChangeText={setHobbies}
+                    />
+                  </View>
+
+                  {/* 필드 6: 특이사항 */}
+                  <Text style={styles.inputLabel}>{t.notesInputLabel}</Text>
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      { height: 80, alignItems: "flex-start", paddingTop: 12 },
+                    ]}
+                  >
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder={t.notesPlaceholder}
+                      placeholderTextColor="#AEAEB2"
+                      multiline
+                      numberOfLines={3}
+                      value={notes}
+                      onChangeText={setNotes}
+                    />
+                  </View>
+
+                  {/* 최종 제출 버튼 */}
+                  <TouchableOpacity
+                    style={styles.modalSubmitButton}
+                    onPress={handleSave}
+                  >
+                    <Text style={styles.modalSubmitButtonText}>
+                      {editingRecipient ? t.saveBtn : t.addBtn}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

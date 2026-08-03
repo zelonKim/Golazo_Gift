@@ -118,6 +118,7 @@ export default function RecommendResultScreen() {
     },
     enabled: !!eventId,
   });
+  console.log("🛍️ 저장된 상품:", savedRecommendations);
 
   // 🚀 2. useMutation: AI 엔진 추천 요청 API
   const recommendMutation = useMutation({

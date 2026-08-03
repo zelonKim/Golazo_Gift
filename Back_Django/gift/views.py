@@ -21,7 +21,6 @@ from datetime import date
 from .models import DateMemo
 
 
-
 class RecipientView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -214,19 +213,19 @@ class EventDetailView(APIView):
 ##################################################################
 
 
-
 class GiftRecommendView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, event_id):
         event = get_object_or_404(Event, id=event_id)
 
+        # 권한 검증
+        if event.recipient.user != request.user:
+            raise PermissionDenied("You do not have permission for this recipient.")
+
+        # 기존 추천 내역 초기화
         RecommendedProduct.objects.filter(event=event).delete()
         recipient = event.recipient
-
-        # 권한 검증 및 번역 에러 처리
-        if recipient.user != request.user:
-            raise PermissionDenied("You do not have permission for this recipient.")
 
         fastapi_url = os.environ.get("FASTAPI_URL") + "api/v1/recommend"
 
@@ -236,8 +235,8 @@ class GiftRecommendView(APIView):
             "hobbies": recipient.hobbies,
             "notes": recipient.notes,
             "purpose": event.purpose,
-            "min_budget": event.min_budget,  # USD 기준 달러 정수
-            "max_budget": event.max_budget,  # USD 기준 달러 정수
+            "min_budget": event.min_budget,
+            "max_budget": event.max_budget,
         }
 
         try:
@@ -250,16 +249,14 @@ class GiftRecommendView(APIView):
                 )
 
             recommendations = response.json()
-            response_data = []
-
-
+            created_products = []
 
             for prod in recommendations:
-                product_name = prod.get("product_name")
+                raw_keyword = prod.get("product_name", "")
 
-                # 💡 [핵심 교체!] 쿠팡 매핑 대신 아마존 API 연동 모듈 호출
+                # 1. 아마존 API 호출
                 amazon_info = get_amazon_product(
-                    search_keyword=product_name,
+                    search_keyword=raw_keyword,
                     min_budget=event.min_budget,
                     max_budget=event.max_budget,
                 )
@@ -273,33 +270,30 @@ class GiftRecommendView(APIView):
                 final_product_name = (
                     amazon_info["product_name"]
                     if amazon_info["product_name"]
-                    else prod.get("product_name", "")
+                    else raw_keyword
                 )
 
-                # DB 영구 기록 저장 (미국 서버 DB에는 USD 가격이 저장됩니다)
-                obj, created = RecommendedProduct.objects.get_or_create(
+                # 2. DB 저장 (product_url, image_url, search_keyword 직접 저장)
+                obj = RecommendedProduct.objects.create(
                     event=event,
                     product_name=final_product_name,
-                    defaults={
-                        "product_price": final_price,
-                        "recommendation_reason": prod.get("recommendation_reason", ""),
-                        "status": "RECOMMENDED",
-                    },
+                    product_price=final_price,
+                    product_url=amazon_info["product_url"],
+                    image_url=amazon_info["image_url"],
+                    search_keyword=raw_keyword,
+                    recommendation_reason=prod.get("recommendation_reason", ""),
+                    status="RECOMMENDED",
                 )
 
-                serializer = RecommendedProductSerializer(obj)
-                prod_dict = serializer.data
+                created_products.append(obj)
 
-                # 프론트엔드 반환 딕셔너리에 임시 어소시에이트 링크 및 이미지 삽입
-                prod_dict["product_url"] = amazon_info["product_url"]
-                prod_dict["image_url"] = amazon_info["image_url"]
-
-                response_data.append(prod_dict)
+            # 3. DB에 저장된 객체를 Serializer로 직렬화하여 반환
+            serializer = RecommendedProductSerializer(created_products, many=True)
 
             return Response(
                 {
                     "message": "AI Recommendations and Amazon Matching Success!",
-                    "recommendations": response_data,
+                    "recommendations": serializer.data,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -329,33 +323,14 @@ class RecommendedProductListView(APIView):
         if event.recipient.user != request.user:
             raise PermissionDenied("추천 내역을 조회할 권한이 없습니다.")
 
-        # 2. 이 이벤트로 저장된 추천 상품들 싹 긁어오기
+        # 2. 이 이벤트로 저장된 추천 상품들 DB에서 즉시 조회
         products = RecommendedProduct.objects.filter(event=event).order_by("id")
 
-        # 3. 💡 [중요] 조회할 때도 아마존 링크와 이미지를 실시간으로 슥 얹어줍니다!
-        response_data = []
-        for prod in products:
-            serializer = RecommendedProductSerializer(prod)
-            prod_dict = serializer.data
+        # 3. Serializer를 통해 DB 데이터를 JSON으로 바로 변환하여 반환
+        serializer = RecommendedProductSerializer(products, many=True)
 
-            # 가격(Budget) 범위는 오차 범위를 최소화하기 위해 해당 상품 가격 근처로 타겟팅합니다.
-            amazon_info = get_amazon_product(
-                search_keyword=prod.product_name,
-                min_budget=prod.product_price,
-                max_budget=prod.product_price 
-            )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-            # 💡 실시간 아마존 정보 바인딩 (어소시에이트 태그 'golazo0d4-20' 주입 완료된 링크가 들어옵니다)
-            prod_dict["product_url"] = amazon_info["product_url"]
-            prod_dict["image_url"] = amazon_info["image_url"]
-            
-            # API 호출이 불가능하거나 실패했을 때 UI 보존을 위해 기본 가격 유지
-            if amazon_info["price"] > 0:
-                prod_dict["product_price"] = amazon_info["price"]
-
-            response_data.append(prod_dict)
-
-        return Response(response_data, status=status.HTTP_200_OK)
 
 ############################
 
@@ -563,8 +538,8 @@ class GiftQuickRecommendView(APIView):
                     "product_name": final_product_name,
                     "product_price": final_price,
                     "recommendation_reason": prod.get("recommendation_reason", ""),
-                    "product_url": amazon_info["product_url"], 
-                    "image_url": amazon_info["image_url"],    
+                    "product_url": amazon_info["product_url"],
+                    "image_url": amazon_info["image_url"],
                 }
                 response_data.append(prod_dict)
 

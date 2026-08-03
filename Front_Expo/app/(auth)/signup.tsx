@@ -19,7 +19,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -209,84 +209,90 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.content}>
-          {/* 상단 타이틀 */}
-          <View style={styles.welcomeSection}>
-            <Text style={styles.subTitle}>{t.subTitle}</Text>
-            <Text style={styles.mainTitle}>{t.mainTitle}</Text>
-          </View>
-
-          {/* 폼 영역 */}
-          <View style={styles.formContainer}>
-            {/* ✉ 이메일 입력창 */}
-            <View style={styles.inputWrapper}>
-              <Mail size={18} color="#FF7096" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder={t.emailPlaceholder}
-                placeholderTextColor="#AEAEB2"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? -90 : -60}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.content}>
+            {/* 상단 타이틀 */}
+            <View style={styles.welcomeSection}>
+              <Text style={styles.subTitle}>{t.subTitle}</Text>
+              <Text style={styles.mainTitle}>{t.mainTitle}</Text>
             </View>
 
-            {/* 🔒 비밀번호 입력창 */}
-            <View style={styles.inputWrapper}>
-              <Lock size={18} color="#FF7096" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder={t.passwordPlaceholder}
-                placeholderTextColor="#AEAEB2"
-                secureTextEntry
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-              />
+            {/* 폼 영역 */}
+            <View style={styles.formContainer}>
+              {/* ✉ 이메일 입력창 */}
+              <View style={styles.inputWrapper}>
+                <Mail size={18} color="#FF7096" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t.emailPlaceholder}
+                  placeholderTextColor="#AEAEB2"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+
+              {/* 🔒 비밀번호 입력창 */}
+              <View style={styles.inputWrapper}>
+                <Lock size={18} color="#FF7096" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t.passwordPlaceholder}
+                  placeholderTextColor="#AEAEB2"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
+
+              {/* 🔒 비밀번호 확인 입력창 */}
+              <View style={styles.inputWrapper}>
+                <Lock size={18} color="#FF7096" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t.confirmPasswordPlaceholder}
+                  placeholderTextColor="#AEAEB2"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  value={passwordConfirm}
+                  onChangeText={setPasswordConfirm}
+                />
+              </View>
             </View>
 
-            {/* 🔒 비밀번호 확인 입력창 */}
-            <View style={styles.inputWrapper}>
-              <Lock size={18} color="#FF7096" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                placeholder={t.confirmPasswordPlaceholder}
-                placeholderTextColor="#AEAEB2"
-                secureTextEntry
-                autoCapitalize="none"
-                value={passwordConfirm}
-                onChangeText={setPasswordConfirm}
-              />
-            </View>
-          </View>
-
-          {/* 회원가입 버튼 */}
-          <TouchableOpacity
-            style={[
-              styles.cuteButton,
-              signupMutation.isPending && styles.disabledButton,
-            ]}
-            onPress={handleSignUp}
-            disabled={signupMutation.isPending}
-          >
-            {signupMutation.isPending ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.cuteButtonText}>{t.signupBtn}</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* 로그인 링크 */}
-          <View style={styles.loginLink}>
-            <Text style={styles.loginLinkText}>{t.hasAccount}</Text>
-            <TouchableOpacity onPress={() => router.push("./login")}>
-              <Text style={styles.loginLinkTextBold}>{t.loginLink}</Text>
+            {/* 회원가입 버튼 */}
+            <TouchableOpacity
+              style={[
+                styles.cuteButton,
+                signupMutation.isPending && styles.disabledButton,
+              ]}
+              onPress={handleSignUp}
+              disabled={signupMutation.isPending}
+            >
+              {signupMutation.isPending ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.cuteButtonText}>{t.signupBtn}</Text>
+              )}
             </TouchableOpacity>
+
+            {/* 로그인 링크 */}
+            <View style={styles.loginLink}>
+              <Text style={styles.loginLinkText}>{t.hasAccount}</Text>
+              <TouchableOpacity onPress={() => router.push("./login")}>
+                <Text style={styles.loginLinkTextBold}>{t.loginLink}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

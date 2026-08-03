@@ -68,10 +68,14 @@ class RecommendedProductSerializer(serializers.ModelSerializer):
             "id",
             "product_name",
             "product_price",
-            "recommendation_reason",
+            "product_url",
+            "image_url",
             "search_keyword",
+            "recommendation_reason",
             "status",
             "created_at",
+            "updated_at",
+            "event",
         ]
 
 

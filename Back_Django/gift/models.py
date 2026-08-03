@@ -117,6 +117,9 @@ class Event(models.Model):
 ############################
 
 
+from django.db import models
+
+
 class RecommendedProduct(models.Model):
     """AI가 추천한 개별 상품 정보 및 유저의 반응을 기록하는 테이블"""
 
@@ -127,7 +130,6 @@ class RecommendedProduct(models.Model):
         ("DISLIKED", "Disliked"),  # 유저가 '이 상품은 별로예요'를 누름
     ]
 
-    # 1. 어떤 상황(기념일)에서 추천되었는가?
     event = models.ForeignKey(
         Event,
         on_delete=models.CASCADE,
@@ -135,17 +137,38 @@ class RecommendedProduct(models.Model):
         verbose_name="연관된 기념일/이벤트",
     )
 
-    # 2. 추천된 상품의 메타 정보 (외부 쇼핑몰 API를 쓴다면 ID나 URL만 저장해도 됨)
     product_name = models.CharField(max_length=255, verbose_name="상품명")
 
-    product_price = models.PositiveIntegerField(verbose_name="상품 가격")
+    product_price = models.PositiveIntegerField(
+        default=0, verbose_name="상품 가격"
+    )
 
-    # 3. AI의 추천 이유 (추천봇 화면이나 히스토리 탭에 보여줄 용도)
+    # 💡 1. 이미지 URL 저장 필드 추가 (Amazon CDN 길이를 고려해 max_length 설정)
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True,
+        verbose_name="상품 이미지 URL",
+    )
+
+    # 💡 2. 아마존 최종 어소시에이트 구매 링크 (기존 actual_affiliate_url 대체/통일)
+    product_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True,
+        verbose_name="상품 구매 URL",
+    )
+
+    # 💡 3. AI가 아마존 검색에 활용한 원본 키워드 (null 허용)
+    search_keyword = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="검색 키워드",
+    )
+
     recommendation_reason = models.TextField(verbose_name="AI의 추천 이유")
 
-    search_keyword = models.CharField(max_length=255, verbose_name="검색 키워드")
-
-    # 4. 유저의 피드백/상태 (추천 품질 고도화를 위한 핵심 데이터)
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,
@@ -153,18 +176,18 @@ class RecommendedProduct(models.Model):
         verbose_name="유저 반응 상태",
     )
 
-    actual_affiliate_url = models.URLField(
-        max_length=500,
-        blank=True,
-        null=True,
-        verbose_name="실제 생성된 파트너스 링크",
-    )
-
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="추천 일시")
 
-    def __str__(self):
-        return f"[{self.event.recipient.name}]에게 추천된 {self.product_name} ({self.get_status_display()})"
+    # 💡 4. 정보 수정 시점 추적용 (선택)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="수정 일시")
 
+    class Meta:
+        verbose_name = "추천 상품"
+        verbose_name_plural = "추천 상품 목록"
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"[{self.event.recipient.name}] {self.product_name} ({self.get_status_display()})"
 
 ##########################
 

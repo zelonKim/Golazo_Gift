@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Recipient {
@@ -287,13 +287,13 @@ export default function RecommendScreen() {
     return num ? Number(value).toLocaleString() : "";
   };
 
-  // 2. 입력된 문자열에서 쉼표를 제거하고 최대 $10,000 제한을 걸어 숫자로 변환 (State 저장용)
+  // 2. 입력된 문자열에서 쉼표를 제거하고 최대 $1,000,000 제한을 걸어 숫자로 변환 (State 저장용)
   const toRawNumber = (text: string) => {
     const cleanNumber = text.replace(/[^0-9]/g, ""); // 쉼표 및 문자 제거
     if (!cleanNumber) return 0;
 
     const num = Number(cleanNumber);
-    return num > 10000 ? 10000 : num; // 미국 시장에 알맞게 최대 $10,000 한도로 조정
+    return num > 999999 ? 999999 : num; // 미국 시장에 알맞게 최대 $999999 한도로 조정
   };
 
   return (
@@ -304,158 +304,165 @@ export default function RecommendScreen() {
       <View style={styles.header}>
         <Text style={styles.logoText}>{t.headerTitle}</Text>
       </View>
-      {/* 
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      > */}
-      {/* 🚨 [정석 서순 2] 허공 터치 시 키보드 dismiss 레이어를 스크롤뷰 위에 얹어줍니다. */}
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" // 💡 배지나 버튼 누를 때 키보드 때문에 터치가 한 번 씹히는 걸 방지해줍니다!
+        keyboardVerticalOffset={Platform.OS === "ios" ? -20 : -25}
       >
-        <View style={styles.formContainer}>
-          <Text style={styles.mainTitle}>{t.mainTitle}</Text>
+        {/* 🚨 [정석 서순 2] 허공 터치 시 키보드 dismiss 레이어를 스크롤뷰 위에 얹어줍니다. */}
 
-          <Text style={styles.mainSub}>{t.mainSub}</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // 💡 배지나 버튼 누를 때 키보드 때문에 터치가 한 번 씹히는 걸 방지해줍니다!
+        >
+          <View style={styles.formContainer}>
+            <Text style={styles.mainTitle}>{t.mainTitle}</Text>
 
-          {/* 👥 인풋 1: 선물 대상 선택 */}
-          <Text style={styles.inputLabel}>{t.selectRecipient}</Text>
-          {/* 지인 가로 스크롤 영역 */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.recipientSelector}
-            keyboardShouldPersistTaps="handled" // 👈 여기도 추가하면 지인 배지 누를 때 키보드가 바로 안 내려가고 찰떡같이 선택됩니다.
-          >
-            <TouchableOpacity
-              style={[
-                styles.recipientBadge,
-                {
-                  backgroundColor: "#FFF0F3",
-                  borderColor: "#FF7096",
-                  borderStyle: "dashed",
-                },
-              ]}
-              onPress={() => router.push("/(tabs)/recipient")}
+            <Text style={styles.mainSub}>{t.mainSub}</Text>
+
+            {/* 👥 인풋 1: 선물 대상 선택 */}
+            <Text style={styles.inputLabel}>{t.selectRecipient}</Text>
+            {/* 지인 가로 스크롤 영역 */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.recipientSelector}
+              keyboardShouldPersistTaps="handled" // 👈 여기도 추가하면 지인 배지 누를 때 키보드가 바로 안 내려가고 찰떡같이 선택됩니다.
             >
-              <UserPlus size={13} color="#FF7096" style={{ marginRight: 4 }} />
-              <Text
-                style={[
-                  styles.recipientBadgeText,
-                  { fontWeight: Platform.OS === "ios" ? "800" : "900" },
-                ]}
-              >
-                {t.addPeopleBtn}
-              </Text>
-            </TouchableOpacity>
-
-            {recipients.map((r) => (
               <TouchableOpacity
-                key={r.id}
                 style={[
                   styles.recipientBadge,
-                  selectedRecipientId === r.id && styles.recipientBadgeSelected,
+                  {
+                    backgroundColor: "#FFF0F3",
+                    borderColor: "#FF7096",
+                    borderStyle: "dashed",
+                  },
                 ]}
-                onPress={() => setSelectedRecipientId(r.id)}
+                onPress={() => router.push("/(tabs)/recipient")}
               >
-                <User
-                  size={12}
-                  color={selectedRecipientId === r.id ? "white" : "#FF7096"}
+                <UserPlus
+                  size={13}
+                  color="#FF7096"
                   style={{ marginRight: 4 }}
                 />
                 <Text
                   style={[
                     styles.recipientBadgeText,
-                    selectedRecipientId === r.id && { color: "white" },
+                    { fontWeight: Platform.OS === "ios" ? "800" : "900" },
                   ]}
                 >
-                  {r.name}
+                  {t.addPeopleBtn}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
 
-          {/* 🎁 인풋 2: 선물 목적 */}
-          <Text style={styles.inputLabel}>{t.occasionLabel}</Text>
-          <View style={styles.gridContainer}>
-            {PURPOSE_LIST.map((item) => {
-              const isSelected = eventPurpose === item.code;
-              return (
+              {recipients.map((r) => (
                 <TouchableOpacity
-                  key={item.code}
+                  key={r.id}
                   style={[
-                    styles.purposeGridBadge,
-                    isSelected && styles.choiceBadgeSelected,
+                    styles.recipientBadge,
+                    selectedRecipientId === r.id &&
+                      styles.recipientBadgeSelected,
                   ]}
-                  onPress={() => setEventPurpose(item.code)}
+                  onPress={() => setSelectedRecipientId(r.id)}
                 >
+                  <User
+                    size={12}
+                    color={selectedRecipientId === r.id ? "white" : "#FF7096"}
+                    style={{ marginRight: 4 }}
+                  />
                   <Text
                     style={[
-                      styles.purposeGridBadgeText,
-                      isSelected && { color: "white" },
+                      styles.recipientBadgeText,
+                      selectedRecipientId === r.id && { color: "white" },
                     ]}
                   >
-                    {item.label}
+                    {r.name}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              ))}
+            </ScrollView>
 
-          {/* 💰 인풋 3: 예산 범위 설정 */}
-          <Text style={styles.inputLabel}>{t.budgetLabel}</Text>
-          <View style={styles.budgetRow}>
+            {/* 🎁 인풋 2: 선물 목적 */}
+            <Text style={styles.inputLabel}>{t.occasionLabel}</Text>
+            <View style={styles.gridContainer}>
+              {PURPOSE_LIST.map((item) => {
+                const isSelected = eventPurpose === item.code;
+                return (
+                  <TouchableOpacity
+                    key={item.code}
+                    style={[
+                      styles.purposeGridBadge,
+                      isSelected && styles.choiceBadgeSelected,
+                    ]}
+                    onPress={() => setEventPurpose(item.code)}
+                  >
+                    <Text
+                      style={[
+                        styles.purposeGridBadgeText,
+                        isSelected && { color: "white" },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* 💰 인풋 3: 예산 범위 설정 */}
+            <Text style={styles.inputLabel}>{t.budgetLabel}</Text>
             <View style={styles.budgetRow}>
-              <View style={[styles.inputWrapper, { flex: 1 }]}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={t.minBudgetPlaceholder}
-                  placeholderTextColor="#AEAEB2"
-                  keyboardType="number-pad" // 숫자 키패드만 나오도록 변경(iOS/안드로이드 공통 권장)
-                  value={toDisplayValue(minBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
-                  onChangeText={(text) => setMinBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
-                />
-              </View>
+              <View style={styles.budgetRow}>
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={t.minBudgetPlaceholder}
+                    placeholderTextColor="#AEAEB2"
+                    keyboardType="number-pad" // 숫자 키패드만 나오도록 변경(iOS/안드로이드 공통 권장)
+                    value={toDisplayValue(minBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
+                    onChangeText={(text) => setMinBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
+                  />
+                </View>
 
-              <Text style={styles.budgetBetween}>-</Text>
+                <Text style={styles.budgetBetween}>-</Text>
 
-              <View style={[styles.inputWrapper, { flex: 1 }]}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={t.maxBudgetPlaceholder}
-                  placeholderTextColor="#AEAEB2"
-                  keyboardType="number-pad"
-                  value={toDisplayValue(maxBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
-                  onChangeText={(text) => setMaxBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
-                />
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={t.maxBudgetPlaceholder}
+                    placeholderTextColor="#AEAEB2"
+                    keyboardType="number-pad"
+                    value={toDisplayValue(maxBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
+                    onChangeText={(text) => setMaxBudget(toRawNumber(text))} // 숫자로만 정제해서 state 저장
+                  />
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* 🤖 추천받기 제출 버튼 */}
-          <TouchableOpacity
-            style={[
-              styles.modalSubmitButton,
-              createEventMutation.isPending && styles.disabledButton,
-            ]}
-            onPress={handleCreateEvent}
-            disabled={createEventMutation.isPending}
-          >
-            {createEventMutation.isPending ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <>
-                <Text style={styles.modalSubmitButtonText}>{t.submitBtn}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-      {/* </KeyboardAvoidingView> */}
+            {/* 🤖 추천받기 제출 버튼 */}
+            <TouchableOpacity
+              style={[
+                styles.modalSubmitButton,
+                createEventMutation.isPending && styles.disabledButton,
+              ]}
+              onPress={handleCreateEvent}
+              disabled={createEventMutation.isPending}
+            >
+              {createEventMutation.isPending ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.modalSubmitButtonText}>
+                    {t.submitBtn}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

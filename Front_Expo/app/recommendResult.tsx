@@ -40,7 +40,7 @@ const translations = {
       "AI is finding the best gifts that\nyour people will absolutely love.",
     successSub:
       "AI has picked the best gifts\nbased on the budget and preferences!",
-    refreshBtn: "Get New Recommendations",
+    refreshBtn: "Get Other Gift Ideas 🤖", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
     sectionTitle: "AI Top3 Picks",
     whyAiLabel: "🤖 WHY AI RECOMMEND",
     buyBtn: "🎁 Buy on Amazon",
@@ -61,7 +61,7 @@ const translations = {
       "La IA está buscando los mejores regalos\nque a tus personas les encantarán.",
     successSub:
       "¡La IA ha seleccionado los mejores regalos basados en el presupuesto y preferencias!",
-    refreshBtn: "Ver nuevas ideas", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
+    refreshBtn: "Obtener más ideas 🤖", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
     sectionTitle: "Los 3 mejores de la IA",
     whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
     buyBtn: "🎁 Comprar en Amazon", // 💡 미국 아마존 랜딩 버튼의 완벽한 스패니시화

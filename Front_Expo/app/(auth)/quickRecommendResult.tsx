@@ -2,7 +2,7 @@
 import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { ArrowLeft, BookmarkCheck } from "lucide-react-native";
+import { ArrowLeft, Bot } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -40,14 +40,14 @@ const translations = {
     priceVaries: "Price Varies",
     whyAiLabel: "🤖 WHY AI RECOMMENDS",
     buyBtn: "🎁 Buy on Amazon ➔",
-    saveBtn: "Save These Gift Picks",
+    getOtherBtn: "Get Other Gift Ideas",
 
     // 알림 메시지
     alertNoticeTitle: "Notice",
     alertNoData:
       "No recommendation results found. Please enter your details again. 🥲",
     alertAccountTitle: "Account Required",
-    alertAccountMsg: "Sign up to save your gift recommendation history!",
+    alertAccountMsg: "Please sign up to get other gift ideas.",
   },
   es: {
     loadingText: "Cargando tus resultados...",
@@ -59,7 +59,7 @@ const translations = {
     priceVaries: "Precio variable",
     whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
     buyBtn: "🎁 Comprar en Amazon ➔",
-    saveBtn: "Guardar estas ideas", // 💡 가로폭 붕괴 방지를 위해 'ideas'로 축약!
+    getOtherBtn: "Obtener más ideas de regalos",
 
     // 알림 메시지
     alertNoticeTitle: "Aviso",
@@ -67,7 +67,7 @@ const translations = {
       "No se encontraron resultados. Por favor, ingresa los datos otra vez. 🥲",
     alertAccountTitle: "Cuenta requerida",
     alertAccountMsg:
-      "¡Regístrate para guardar tu historial de recomendaciones!",
+      "¡Por favor crea una cuenta para ver más ideas de regalos!",
   },
 };
 
@@ -231,12 +231,8 @@ export default function RecommendResultScreen() {
             Alert.alert(t.alertAccountTitle, t.alertAccountMsg);
           }}
         >
-          <BookmarkCheck
-            color={"#FF7096"}
-            size={20}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.saveSoftButtonText}>{t.saveBtn}</Text>
+          <Text style={styles.saveSoftButtonText}>{t.getOtherBtn}</Text>
+          <Bot color={"#FF7096"} size={22} style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

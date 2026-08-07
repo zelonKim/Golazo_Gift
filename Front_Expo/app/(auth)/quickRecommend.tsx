@@ -47,8 +47,8 @@ const translations = {
     labelOccasion: "🥳 Gift Occasion",
     labelAgeGroup: "🎂 Age Group",
     labelGender: "🧬 Gender",
-    labelHobbies: "🎨 Hobbies & Interests (Optional)",
-    labelNotes: "⭐️ Important Notes (Optional)",
+    labelHobbies: "🎨 Hobbies / Interests (Optional)",
+    labelNotes: "⭐️ Notes / Preferences (Optional)",
     labelBudget: "🪙 Budget Range ($)",
 
     // 인풋 플레이스홀더
@@ -82,8 +82,8 @@ const translations = {
     labelOccasion: "🥳 Motivo del regalo",
     labelAgeGroup: "🎂 Edad",
     labelGender: "🧬 Género",
-    labelHobbies: "🎨 Hobbies e intereses (Opcional)",
-    labelNotes: "⭐️ Notas importantes (Opcional)",
+    labelHobbies: "🎨 Hobbies / Interests (Opcional)",
+    labelNotes: "⭐️ Notes / Preferences (Opcional)",
     labelBudget: "🪙 Rango de presupuesto ($)",
 
     // 인풋 플레이스홀더
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     color: "#FF7096",
   },
   subTitle: {
-    fontSize: 14,
+    fontSize: Platform.OS === "ios" ? 14 : 13,
     color: "#64748B",
     lineHeight: 20,
     textAlign: "center",
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     marginBottom: Platform.OS === "ios" ? 32 : 28,
   },
   label: {
-    fontSize: 14,
+    fontSize: Platform.OS === "ios" ? 14 : 13,
     fontWeight: "700",
     color: "#334155",
     marginBottom: 10,
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF7096",
   },
   chipText: {
-    fontSize: 13,
+    fontSize: Platform.OS === "ios" ? 13 : 12,
     fontWeight: "600",
     color: "#64748B",
   },
@@ -589,7 +589,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 14,
+    fontWeight: "500",
+    fontSize: Platform.OS === "ios" ? 14 : 13,
     color: "#1E293B",
   },
   textArea: {
@@ -613,8 +614,8 @@ const styles = StyleSheet.create({
   },
   budgetTextInput: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: Platform.OS === "ios" ? 14 : 13,
+    fontWeight: "500",
     color: "#1E293B",
   },
   budgetBetween: {
@@ -636,7 +637,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: Platform.OS === "ios" ? 14 : 13.5,
     fontWeight: "700",
   },
   loadingRow: {

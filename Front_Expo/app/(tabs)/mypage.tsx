@@ -23,6 +23,7 @@ import {
   Dimensions,
   Image,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -393,7 +394,9 @@ export default function MyPageScreen() {
 
           {/* 개인 정보 처리 방침*/}
           <TouchableOpacity
-            onPress={() => Linking.openURL("https://www.golazo.kr/privacy")}
+            onPress={() =>
+              Linking.openURL("https://www.golazogift.com/privacy")
+            }
           >
             <View style={styles.cuteListItem}>
               <View style={styles.listItemLeft}>
@@ -446,41 +449,52 @@ export default function MyPageScreen() {
         visible={isEditModalVisible}
         onRequestClose={() => setIsEditModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>
-                  {t.menuNicknameTitle}
-                </Text>
-                <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                  <X size={20} color="#AEAEB2" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? -210 : -190}
+        >
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>
+                    {t.menuNicknameTitle}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsEditModalVisible(false)}
+                  >
+                    <X size={20} color="#AEAEB2" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.inputLabel}>{t.newNicknameLabel}</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder={t.placeholderNickname}
+                    placeholderTextColor="#AEAEB2"
+                    value={inputNickname}
+                    onChangeText={setInputNickname}
+                    maxLength={15}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={styles.modalSubmitButton}
+                  onPress={handleSaveNickname}
+                >
+                  <Text style={styles.modalSubmitButtonText}>
+                    {t.saveChangesBtn}
+                  </Text>
                 </TouchableOpacity>
               </View>
-
-              <Text style={styles.inputLabel}>{t.newNicknameLabel}</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={t.placeholderNickname}
-                  placeholderTextColor="#AEAEB2"
-                  value={inputNickname}
-                  onChangeText={setInputNickname}
-                  maxLength={15}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.modalSubmitButton}
-                onPress={handleSaveNickname}
-              >
-                <Text style={styles.modalSubmitButtonText}>
-                  {t.saveChangesBtn}
-                </Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

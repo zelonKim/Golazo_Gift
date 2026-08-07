@@ -25,6 +25,11 @@ const translations = {
     whyAiLabel: "🤖 Why AI Recommend",
     buyBtn: "Buy on Amazon ➔",
 
+    // 추가된 버튼 및 알림 텍스트
+    reRecommendBtn: "Get More Gift Recommendations",
+    reRecommendAlert:
+      "Please download the app to get more gift recommendations. 📲 ",
+
     // 앱 다운로드 유도 카드 (CTA)
     ctaBadge: "Download the App",
     ctaTitleLine1: "Never Miss a Special Day.",
@@ -41,19 +46,24 @@ const translations = {
     loadingText: "Cargando tus opciones...",
     backBtn: "Volver",
     badgeText: "🎉 Recomendado",
-    mainTitle: "¡Regalos ideales listos! 🥳", // 💡 심플하고 신나는 2030 라틴 감성
+    mainTitle: "¡Regalos ideales listos! 🥳",
     subTitle:
       "La IA eligió las mejores opciones según tu presupuesto y preferencias.",
     priceVaries: "Precio variable",
     whyAiLabel: "🤖 Por qué lo recomienda la IA",
     buyBtn: "Comprar en Amazon ➔",
 
+    // 추가된 버튼 및 알림 텍스트
+    reRecommendBtn: "Obtener más recomendaciones de regalos",
+    reRecommendAlert:
+      "¡Por favor descarga la app para recibir más recomendaciones de regalos! 📲",
+
     // 앱 다운로드 유도 카드 (CTA)
     ctaBadge: "Descarga la App",
     ctaTitleLine1: "No olvides ningún día especial.",
     ctaTitleHighlight: "¡La App Golazo!",
     ctaDesc:
-      "Guarda a tus seres queridos en la app y recibe alertas amistosas justo antes de cada evento especial. 🔔", // 💡 seres queridos 연동!
+      "Guarda a tus seres queridos en la app y recibe alertas amistosas justo antes de cada evento especial. 🔔",
     backHomeBtn: "Volver al inicio",
 
     // 스토어 알림창
@@ -92,10 +102,19 @@ export default function RecommendResultPage() {
       alert(t.alertTitle);
       router.push("/recommend");
     }
-  }, [router, lang]); // 💡 언어 초기화 후 경고창 번역 동기화를 위해 lang 의존성 포함
+  }, [router, lang]);
 
   const handleStoreAlert = () => {
     alert(t.alertStore);
+  };
+
+  const handleReRecommendAlert = () => {
+    alert(t.reRecommendAlert);
+
+    const ctaElement = document.getElementById("cta-section");
+    if (ctaElement) {
+      ctaElement.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   if (!isReady) {
@@ -195,7 +214,7 @@ export default function RecommendResultPage() {
                 <span>🎁 {t.buyBtn}</span>
               </a>
 
-              {/* 미국 시장 기준 제휴 Disclosure 문구 (글로벌 표준 영문 유지 🇺🇸) */}
+              {/* 미국 시장 기준 제휴 Disclosure 문구 */}
               <p className="text-[10.5px] text-slate-400 text-center mt-3 leading-normal max-w-3xl mx-auto">
                 ※ As an Amazon Associate, we earn a small commission from
                 qualifying purchases at no extra cost to you.
@@ -204,8 +223,22 @@ export default function RecommendResultPage() {
           ))}
         </div>
 
+        <button
+          type="button"
+          onClick={handleReRecommendAlert}
+          className="mt-22 mb-10 w-full  bg-gradient-to-l from-pink-500 via-rose-500 to-amber-300 text-white font-bold py-4 rounded-xl hover:opacity-95 transition-all disabled:opacity-50 text-[17px] shadow-md shadow-pink-300 flex items-center justify-center gap-2 tracking-wide cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <>
+            <span>{t.reRecommendBtn}</span>
+            <span className="text-xl">🤖</span>
+          </>
+        </button>
+
         {/* 💖 모바일 앱 다운로드 유도 카드 (CTA) */}
-        <div className="mt-14 bg-gradient-to-br from-pink-300 via-rose-100 to-amber-200 rounded-[32px] p-8 text-center text-slate-800 shadow-[0_20px_50px_rgba(244,63,94,0.15)] relative overflow-hidden shadow-pink-200">
+        <div
+          id="cta-section"
+          className="mt-6 mb-3 bg-gradient-to-br from-pink-300 via-rose-100 to-amber-200 rounded-[32px] p-8 text-center text-slate-800 shadow-[0_20px_50px_rgba(244,63,94,0.15)] relative overflow-hidden shadow-pink-200"
+        >
           {/* 배지 */}
           <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-400 to-pink-500 text-white text-[13px] font-black tracking-wider px-3.5 py-1.5 rounded-full mb-5 shadow-md shadow-rose-200 animate-bounce">
             <span>{t.ctaBadge}</span>
@@ -227,10 +260,10 @@ export default function RecommendResultPage() {
           </p>
 
           {/* 스토어 버튼 */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 max-w-sm mx-auto relative z-10">
+          <div className="mb-3 flex flex-col sm:flex-row items-center justify-center gap-8 max-w-sm mx-auto relative z-10">
             <button
               onClick={handleStoreAlert}
-              className="hover:scale-103 transition-transform duration-150 active:scale-98"
+              className="hover:scale-103 transition-transform duration-150 active:scale-98 cursor-pointer"
             >
               <Image
                 src="/images/playStore.png"
@@ -243,7 +276,7 @@ export default function RecommendResultPage() {
 
             <button
               onClick={handleStoreAlert}
-              className="hover:scale-103 transition-transform duration-150 active:scale-98"
+              className="scale-99 hover:scale-103 transition-transform duration-150 active:scale-98 cursor-pointer"
             >
               <Image
                 src="/images/appStore.svg"
@@ -255,12 +288,12 @@ export default function RecommendResultPage() {
             </button>
           </div>
 
-          <button
+          {/* <button
             onClick={() => router.push("/")}
             className="text-[13px] text-slate-600 font-bold hover:text-pink-500 transition-all duration-200 mt-8 inline-flex items-center gap-1.5 transform hover:scale-101 active:scale-95 cursor-pointer"
           >
             <span>🧸 {t.backHomeBtn}</span>
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

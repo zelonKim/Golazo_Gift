@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   sectionContainer: { marginTop: 4 },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#2D2D3A",
     marginBottom: 16,
     paddingLeft: 4,

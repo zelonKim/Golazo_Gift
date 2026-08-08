@@ -40,7 +40,7 @@ const translations = {
       "AI is finding the best gifts that\nyour people will absolutely love.",
     successSub:
       "AI has picked the best gifts\nbased on the budget and preferences!",
-    refreshBtn: "Get Other Gift Ideas 🤖", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
+    refreshBtn: "Get Other Gift Ideas 🤖", 
     sectionTitle: "AI Top3 Picks",
     whyAiLabel: "🤖 WHY AI RECOMMEND",
     buyBtn: "🎁 Buy on Amazon",

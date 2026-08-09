@@ -108,6 +108,14 @@ export default function RecommendResultPage() {
     alert(t.alertStore);
   };
 
+  const handlePlayStore = () => {
+    window.open(
+      "https://play.google.com/store/apps/details?id=com.zelon.golazo.gift.us",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   const handleReRecommendAlert = () => {
     alert(t.reRecommendAlert);
 
@@ -226,12 +234,11 @@ export default function RecommendResultPage() {
         <button
           type="button"
           onClick={handleReRecommendAlert}
-          className="mt-22 mb-10 w-full  bg-gradient-to-l from-pink-500 via-rose-500 to-amber-300 text-white font-bold py-4 rounded-xl hover:opacity-95 transition-all disabled:opacity-50 text-[17px] shadow-md shadow-pink-300 flex items-center justify-center gap-2 tracking-wide cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+          className="my-12 w-full  bg-amber-50 text-pink-500/90  border-pink-300 font-bold py-4 rounded-2xl hover:bg-amber-100/90 transition-all disabled:opacity-50 text-[18px] border-2 shadow-sm shadow-pink-100 flex items-center justify-center gap-2 tracking-wide cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
         >
-          <>
-            <span>{t.reRecommendBtn}</span>
-            <span className="text-xl">🤖</span>
-          </>
+          <span className="text-xl ">✨</span>
+          <span>{t.reRecommendBtn}</span>
+          <span className="text-xl ">🤖</span>
         </button>
 
         {/* 💖 모바일 앱 다운로드 유도 카드 (CTA) */}
@@ -262,7 +269,7 @@ export default function RecommendResultPage() {
           {/* 스토어 버튼 */}
           <div className="mb-3 flex flex-col sm:flex-row items-center justify-center gap-8 max-w-sm mx-auto relative z-10">
             <button
-              onClick={handleStoreAlert}
+              onClick={handlePlayStore}
               className="hover:scale-103 transition-transform duration-150 active:scale-98 cursor-pointer"
             >
               <Image

@@ -209,10 +209,10 @@ class GoogleLoginView(APIView):
             email = id_info.get("email")
             name = id_info.get("name", "")
 
-        except ValueError as e:
+        except Exception as e:
             print(f"구글 토큰 검증 실패 원인 상세: {e}")
             return Response(
-                {"error": "유효하지 않은 구글 토큰입니다."},
+                {"error": f"구글 토큰 검증 실패: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

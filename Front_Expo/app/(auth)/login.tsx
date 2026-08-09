@@ -194,13 +194,15 @@ export default function LoginScreen() {
         Alert.alert("Error", "Can not retrieve Google ID token.");
       }
     } catch (error: any) {
-      console.error("구글 로그인 에러:", error);
-      // 사용자가 취소한 게 아니라면 에러 알림
-      if (error.code !== "ASYNC_OP_IN_PROGRESS") {
-        Alert.alert("Error", "Failed to log in with Google.");
-      }
+    console.error("구글 로그인 에러:", error);
+    if (error.code !== "ASYNC_OP_IN_PROGRESS") {
+      // error 객체 전체와 code, message를 상세히 출력
+      Alert.alert(
+        "Google Login Error",
+        `Code: ${error.code}\nMessage: ${error.message || JSON.stringify(error)}`
+      );
     }
-  };
+  }
 
   // 🍏 애플 로그인 연동
   const handleAppleLogin = async () => {

@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "520508328364-7ubad66sslp16iihvpjf9i9qpg0b72bv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zelon.golazo.gift.us",
+            "certificate_hash": "8da4c1a4d5364542813960ea6414917706168330"
+          }
+        },
+        {
           "client_id": "520508328364-1mhi8jtom62gn4kvhlupbm08hpa92n29.apps.googleusercontent.com",
           "client_type": 3
         }

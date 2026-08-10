@@ -167,37 +167,41 @@ export default function LoginScreen() {
     loginMutation.mutate({ email, password });
   };
 
-  // 🌐 구글 로그인 연동
-  const handleGoogleLogin = async () => {
-    try {
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
+
+
+
+// 🌐 구글 로그인 연동 (안정화 버전)
+const handleGoogleLogin = async () => {
+  try {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+    // 잔재 세션 정리 (이전 로그인 세션 꼬임 방지)
+    await GoogleSignin.signOut().catch(() => {});
+
+    // 인자 없이 기본 signIn() 호출
+    const response = await GoogleSignin.signIn();
+
+    // v11+ 라이브러리 반응형 대응 (response.data.idToken 또는 response.idToken)
+    const idToken = response.data?.idToken || (response as any).idToken;
+
+    if (idToken) {
+      socialLoginMutation.mutate({
+        provider: "google",
+        token: idToken,
       });
-
-      // 세션 잔재로 인한 로그인 팝업 안뜸 현상 예방
-      await GoogleSignin.signOut().catch(() => {});
-
-      const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
-
-      if (idToken) {
-        socialLoginMutation.mutate({
-          provider: "google",
-          token: idToken,
-        });
-      } else {
-        Alert.alert("Error", "Can not retrieve Google ID token.");
-      }
-    } catch (error: any) {
-      console.error("구글 로그인 에러:", error);
-      if (error.code !== "ASYNC_OP_IN_PROGRESS") {
-        Alert.alert(
-          "Google Login Error",
-          `Code: ${error.code}\nMessage: ${error.message || JSON.stringify(error)}`,
-        );
-      }
+    } else {
+      Alert.alert("Error", "Can not retrieve Google ID token.");
     }
-  };
+  } catch (error: any) {
+    console.error("구글 로그인 에러:", error);
+    if (error.code !== "ASYNC_OP_IN_PROGRESS") {
+      Alert.alert(
+        "Google Login Error",
+        `Code: ${error.code}\nMessage: ${error.message || JSON.stringify(error)}`
+      );
+    }
+  }
+};
 
   // 🍏 애플 로그인 연동
   const handleAppleLogin = async () => {

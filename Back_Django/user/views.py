@@ -197,6 +197,7 @@ class GoogleLoginView(APIView):
                 "520508328364-6orujs2vs6jd7bitan4ob43mqleurk19.apps.googleusercontent.com",  # Android Client ID
                 "520508328364-371ttf20f36iumci7k0q2lht6om5g0u3.apps.googleusercontent.com",  # iOS Client ID
                 "520508328364-7ubad66sslp16iihvpjf9i9qpg0b72bv.apps.googleusercontent.com",
+                "520508328364-eh89993c9fiihdgm7lc2alebgmm8vbbs.apps.googleusercontent.com",
             ]
 
             id_info = id_token.verify_oauth2_token(

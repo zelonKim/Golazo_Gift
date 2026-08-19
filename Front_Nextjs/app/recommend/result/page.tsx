@@ -116,6 +116,14 @@ export default function RecommendResultPage() {
     );
   };
 
+  const handleAppStore = () => {
+    window.open(
+      "https://apps.apple.com/app/golazo-gift/id6797392039",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   const handleReRecommendAlert = () => {
     alert(t.reRecommendAlert);
 
@@ -282,7 +290,7 @@ export default function RecommendResultPage() {
             </button>
 
             <button
-              onClick={handleStoreAlert}
+              onClick={handleAppStore}
               className="scale-99 hover:scale-103 transition-transform duration-150 active:scale-98 cursor-pointer"
             >
               <Image

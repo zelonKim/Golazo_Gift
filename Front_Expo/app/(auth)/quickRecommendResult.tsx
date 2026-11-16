@@ -1,14 +1,14 @@
 "use client";
-import * as Localization from "expo-localization";
+import { useQuickResultLanguage } from "@/hooks/Languages/useQuickResultLanguage";
+import { RecommendedProduct } from "@/types/RecommendedProduct";
+import { handleOpenLink } from "@/utils/handleOpenLink";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { ArrowLeft, Bot } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Dimensions,
   Image,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,86 +18,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-interface Product {
-  product_name: string;
-  product_price: number;
-  recommendation_reason: string;
-  product_url: string;
-  image_url: string;
-}
-
-// 🎯 미국 내 히스패닉 맞춤형 퀵 추천 결과 화면 텍스트 딕셔너리
-const translations = {
-  en: {
-    loadingText: "Loading your results...",
-    headerBadge: "🎉 Recommended",
-    mainTitle: "🤖 AI's ",
-    mainTitleHighlight: "Top Picks",
-    subTitle:
-      "Here are the perfect gifts analyzed\nbased on the details you provided.",
-    priceVaries: "Price Varies",
-    whyAiLabel: "🤖 WHY AI RECOMMENDS",
-    buyBtn: "🎁 Buy on Amazon ➔",
-    getOtherBtn: "Get Other Gift Ideas",
-
-    // 알림 메시지
-    alertNoticeTitle: "Notice",
-    alertNoData:
-      "No recommendation results found. Please enter your details again. 🥲",
-    alertAccountTitle: "Account Required",
-    alertAccountMsg: "Please sign up to get other gift ideas.",
-  },
-  es: {
-    loadingText: "Cargando tus resultados...",
-    headerBadge: "🎉 Recomendado",
-    mainTitle: "🤖 Selecciones ",
-    mainTitleHighlight: "de la IA", // 💡 'AI's Top Picks' 대응하는 세련된 문구
-    subTitle:
-      "Aquí tienes los regalos ideales analizados\nsegún la información que nos diste.",
-    priceVaries: "Precio variable",
-    whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
-    buyBtn: "🎁 Comprar en Amazon ➔",
-    getOtherBtn: "Obtener más ideas de regalos",
-
-    // 알림 메시지
-    alertNoticeTitle: "Aviso",
-    alertNoData:
-      "No se encontraron resultados. Por favor, ingresa los datos otra vez. 🥲",
-    alertAccountTitle: "Cuenta requerida",
-    alertAccountMsg:
-      "¡Por favor crea una cuenta para ver más ideas de regalos!",
-  },
-};
-
-export default function RecommendResultScreen() {
+export default function QuickRecommendResultScreen() {
+  const { lang, t } = useQuickResultLanguage();
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const [products, setProducts] = useState<RecommendedProduct[]>([]);
   const [isReady, setIsReady] = useState(false);
-
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  // 🪄 기기 설정 언어 및 기존 저장 세션 스캔
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, []);
-
-  const t = translations[lang];
 
   useEffect(() => {
     const loadSavedData = async () => {
@@ -123,13 +49,9 @@ export default function RecommendResultScreen() {
     if (isReady === false) {
       loadSavedData();
     }
-  }, [lang]); // 💡 언어가 초기화된 직후 경고창 언어 싱크를 위해 의존성 추가
+  }, [lang]);
 
-  const handleOpenLink = async (url: string) => {
-    if (!url) return;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
-  };
+  /////////////////////////////////////////////////////////////////////////////////////////
 
   if (!isReady) {
     return (
@@ -139,9 +61,10 @@ export default function RecommendResultScreen() {
     );
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* 🌟 헤더 영역 */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.replace("/quickRecommend")}
@@ -213,7 +136,6 @@ export default function RecommendResultScreen() {
                 <Text style={styles.buyButtonText}>{t.buyBtn}</Text>
               </TouchableOpacity>
 
-              {/* 공식 어소시에이트 공시 구문 반영 (법적 리스크 방지를 위해 영문 순정 유지 🇺🇸) */}
               <Text style={styles.partnersText}>
                 As an Amazon Associate, we earn a small commission from
                 qualifying purchases at no extra cost to you.
@@ -238,6 +160,8 @@ export default function RecommendResultScreen() {
     </SafeAreaView>
   );
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFBFB" },

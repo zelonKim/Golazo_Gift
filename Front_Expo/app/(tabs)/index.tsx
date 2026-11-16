@@ -1,13 +1,13 @@
 "use client";
 import { client } from "@/api/client";
-import { useTheme } from "@react-navigation/native";
+import { TODAY_STR } from "@/constants/TODAY_STR";
+import { useHomeLanguage } from "@/hooks/Languages/useHomeLanguage";
+import { DateMemo } from "@/types/DateMemo";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Localization from "expo-localization";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import {
   CalendarDays,
   Calendar as CalendarIcon,
@@ -18,7 +18,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Keyboard,
   Modal,
   Platform,
@@ -30,217 +29,21 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { Calendar, LocaleConfig } from "react-native-calendars";
+import { Calendar } from "react-native-calendars";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// 📅 달력 영어 글로벌 세팅
-LocaleConfig.locales["en"] = {
-  monthNames: [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ],
-  monthNamesShort: [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ],
-  dayNames: [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ],
-  dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  today: "Today",
-};
-
-// 📅 달력 스페인어 글로벌 세팅 (추가!)
-LocaleConfig.locales["es"] = {
-  monthNames: [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ],
-  monthNamesShort: [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ],
-  dayNames: [
-    "Domingo",
-    "Lunes",
-    "Martes",
-    "Miércoles",
-    "Jueves",
-    "Viernes",
-    "Sábado",
-  ],
-  dayNamesShort: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
-  today: "Hoy",
-};
-
-LocaleConfig.defaultLocale = "en";
-
-const { width } = Dimensions.get("window");
-
-interface DateMemo {
-  id: number;
-  content: string;
-  target_date: string;
-  d_day: number | null;
-}
-
-// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
-const translations = {
-  en: {
-    headerTitle: "Special Days",
-    loadingText: "Loading special days...",
-    upNext: "Up Next 🎉",
-    getAiGifts: "Get AI Gift Ideas",
-    upcomingDays: "🗓️ Upcoming Days",
-    noEvents: "No Events",
-    noEventsText: "No events added yet.",
-    noEventsSubText:
-      "Tap the button below to save\nyour loved ones' special days!",
-    addEventBtn: "Add Special Day",
-    addEventTitle: "Add Special Day",
-    whatOccasion: "What is the occasion?",
-    placeholderOccasion: "e.g. Mom's Birthday, Anniversary",
-    whenIsIt: "When is it?",
-    selectDate: "Select a date",
-    saveEvent: "Save Event",
-    selectDateTitle: "Select Date 🗓️",
-    ddayText: "D-Day 🎉",
-
-    // 알림 및 토스트 문구
-    requiredTitle: "Required",
-    requiredMsg: "Please fill in all fields.",
-    saveSuccessTitle: "Saved 🎁",
-    saveSuccessMsg: "Your special day has been added successfully.",
-    saveFailTitle: "Failed",
-    saveFailMsg: "Please check your information and try again.",
-    deleteTitle: "Delete Event",
-    deleteConfirm: 'Are you sure you want to delete "{content}"?',
-    deleteCancel: "Cancel",
-    deleteBtn: "Delete",
-    deleteFailMsg: "Something went wrong while deleting this event.",
-  },
-  es: {
-    headerTitle: "Fechas especiales", // 💡 'Special Days'를 가장 널리 쓰는 다정하고 감성적인 스패니시로 매핑
-    loadingText: "Cargando fechas especiales...",
-    upNext: "Próximo evento 🎉", // 💡 'Up Next' -> '다음 기념일'
-    getAiGifts: "Ideas de regalos con IA", // 💡 'Get AI Gift Ideas' -> 히스패닉들이 검색할 때 가장 먼저 와닿는 명사형
-    upcomingDays: "🗓️ Próximos eventos",
-    noEvents: "Sin eventos",
-    noEventsText: "Aún no hay eventos agregados.",
-    noEventsSubText:
-      "¡Toca el botón de abajo para guardar\nlas fechas especiales de tus seres queridos!",
-    addEventBtn: "Agregar fecha especial",
-    addEventTitle: "Agregar fecha especial",
-    whatOccasion: "¿Cuál es la ocasión?", // 💡 자연스러운 의문문 형식
-    placeholderOccasion: "Ej. Cumpleaños de mamá, Aniversario", // 💡 미국 히스패닉 맞춤형 디폴트 예시 (Mom's Birthday 직관적 대치)
-    whenIsIt: "¿Cuándo es?",
-    selectDate: "Seleccionar fecha",
-    saveEvent: "Guardar evento",
-    selectDateTitle: "Seleccionar fecha 🗓️",
-    ddayText: "D-Day 🎉", // 💡 스페인어권 2030들도 'D-Day'라는 표현은 밈(Meme)이나 소셜 미디어에서 그대로 씁니다.
-
-    // 알림 및 토스트 문구
-    requiredTitle: "Obligatorio",
-    requiredMsg: "Por favor, completa todos los campos.",
-    saveSuccessTitle: "¡Guardado! 🎁",
-    saveSuccessMsg: "Tu fecha especial ha sido agregada con éxito.",
-    saveFailTitle: "Error",
-    saveFailMsg: "Por favor, comprueba tus datos e inténtalo de nuevo.",
-    deleteTitle: "Eliminar evento",
-    deleteConfirm: '¿Estás seguro de que quieres eliminar "{content}"?',
-    deleteCancel: "Cancelar",
-    deleteBtn: "Eliminar",
-    deleteFailMsg: "Hubo un error al intentar eliminar este evento.",
-  },
-};
-
 export default function HomeScreen() {
-  const { colors } = useTheme();
+  const { t, lang } = useHomeLanguage();
   const queryClient = useQueryClient();
 
-  const todayStr = new Date().toISOString().split("T")[0];
-
-  // 📝 모달 창 상태 및 인풋 필드 상태 관리
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [memoDate, setMemoDate] = useState("");
 
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
+  /////////////////////////////////////////////////////////////////////////////////////////
 
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어 + 달력 언어 실시간 바인딩
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-        LocaleConfig.defaultLocale = savedLang;
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-          LocaleConfig.defaultLocale = "es";
-        } else {
-          setLang("en");
-          LocaleConfig.defaultLocale = "en";
-        }
-      }
-    };
-    initLanguage();
-  }, [isModalVisible]); // 모달이 켜지거나 설정이 유지될 때 달력 한글/스페인어 로케일 동기화 보장
-
-  // 현재 언어셋 활성화
-  const t = translations[lang];
-
-  // 🔍 1. useQuery: 장고 백엔드로부터 로그인한 유저의 기념일 리스트 가져오기
   const { data: anniversaries = [], isLoading } = useQuery<DateMemo[]>({
     queryKey: ["dateMemos"],
     queryFn: async () => {
@@ -249,7 +52,10 @@ export default function HomeScreen() {
     },
   });
 
-  // 🚀 2. useMutation: 새로운 기념일 저장(POST)하기
+  const mainDDay = anniversaries.length > 0 ? anniversaries[0] : null;
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+
   const addMemoMutation = useMutation({
     mutationFn: async (newMemo: { content: string; target_date: string }) => {
       const response = await client.post("gift/date-memo/", newMemo);
@@ -268,7 +74,47 @@ export default function HomeScreen() {
     },
   });
 
-  // 🚀 3. useMutation: 스마트폰 기기 푸시 토큰 백엔드로 전송 (POST)
+  const handleCreateMemo = () => {
+    if (!memoContent || !memoDate) {
+      Alert.alert(t.requiredTitle, t.requiredMsg);
+      return;
+    }
+    addMemoMutation.mutate({
+      content: memoContent,
+      target_date: memoDate,
+    });
+  };
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+
+  const deleteMemoMutation = useMutation({
+    mutationFn: async (memoId: number) => {
+      const response = await client.delete(`gift/date-memo/${memoId}/`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dateMemos"] });
+    },
+    onError: (error: any) => {
+      console.error("❌ 백엔드 에러 상태 코드:", error.response?.status);
+      console.error("❌ 백엔드 에러 상세 내용:", error.response?.data);
+      Alert.alert(t.saveFailTitle, t.deleteFailMsg);
+    },
+  });
+
+  const handleLongPress = (memoId: number, content: string) => {
+    Alert.alert(t.deleteTitle, t.deleteConfirm.replace("{content}", content), [
+      { text: t.deleteCancel, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteMemoMutation.mutate(memoId),
+      },
+    ]);
+  };
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+
   const savePushTokenMutation = useMutation({
     mutationFn: async (token: string) => {
       console.log("💡 FCM 디바이스 푸시 토큰:", token);
@@ -285,23 +131,8 @@ export default function HomeScreen() {
     },
   });
 
-  // 🚀 4. useMutation: 기념일 메모 삭제(DELETE)하기
-  const deleteMemoMutation = useMutation({
-    mutationFn: async (memoId: number) => {
-      const response = await client.delete(`gift/date-memo/${memoId}/`);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dateMemos"] });
-    },
-    onError: (error: any) => {
-      console.error("❌ 백엔드 에러 상태 코드:", error.response?.status);
-      console.error("❌ 백엔드 에러 상세 내용:", error.response?.data);
-      Alert.alert(t.saveFailTitle, t.deleteFailMsg);
-    },
-  });
+  /////////////////////////////////////////////////////////////////////////////////////////
 
-  // 💡 초동 로드 시 알림 권한 획득 및 토큰 추출 프로세스 기동
   useEffect(() => {
     async function setupNotifications() {
       try {
@@ -340,32 +171,7 @@ export default function HomeScreen() {
     setupNotifications();
   }, []);
 
-  // 💾 등록하기 버튼 누를 때 검증 핸들러
-  const handleCreateMemo = () => {
-    if (!memoContent || !memoDate) {
-      Alert.alert(t.requiredTitle, t.requiredMsg);
-      return;
-    }
-    addMemoMutation.mutate({
-      content: memoContent,
-      target_date: memoDate,
-    });
-  };
-
-  // 🗑️ 길게 꾹 눌렀을 때 작동할 삭제 컴펌 알림
-  const handleLongPress = (memoId: number, content: string) => {
-    Alert.alert(t.deleteTitle, t.deleteConfirm.replace("{content}", content), [
-      { text: t.deleteCancel, style: "cancel" },
-      {
-        text: t.deleteBtn,
-        style: "destructive",
-        onPress: () => deleteMemoMutation.mutate(memoId),
-      },
-    ]);
-  };
-
-  // 👑 목록 중 d_day가 가장 가까운 메인 디데이 타겟 설정
-  const mainDDay = anniversaries.length > 0 ? anniversaries[0] : null;
+  /////////////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView
@@ -616,7 +422,7 @@ export default function HomeScreen() {
 
               <Calendar
                 current={memoDate || undefined}
-                minDate={todayStr}
+                minDate={TODAY_STR}
                 onDayPress={(day) => {
                   setMemoDate(day.dateString);
                   setIsCalendarVisible(false);
@@ -653,6 +459,8 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

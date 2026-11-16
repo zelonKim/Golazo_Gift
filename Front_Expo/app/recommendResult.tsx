@@ -1,11 +1,11 @@
 "use client";
 import { client } from "@/api/client";
+import { useRecommendResultsLanguage } from "@/hooks/Languages/useRecommendResultsLanguage";
+import { RecommendedProduct } from "@/types/RecommendedProduct";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Localization from "expo-localization";
 import { router, useLocalSearchParams } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { ArrowLeft, CheckCircle, Gift, ShoppingBag } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,90 +20,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface RecommendedProduct {
-  id: number;
-  product_name: string;
-  product_price: number;
-  recommendation_reason: string;
-  product_url: string;
-  image_url: string;
-}
-
-// 🎯 미국 내 히스패닉 맞춤형 결과 화면 텍스트 딕셔너리
-const translations = {
-  en: {
-    headerTitle: "AI Recommendations",
-    aiPickTag: "AI pick",
-    loadingGifts: "Finding Gifts... 🤖",
-    successGifts: "Best Gifts Picked! 🥳",
-    loadingSub:
-      "AI is finding the best gifts that\nyour people will absolutely love.",
-    successSub:
-      "AI has picked the best gifts\nbased on the budget and preferences!",
-    refreshBtn: "Get Other Gift Ideas 🤖", 
-    sectionTitle: "AI Top3 Picks",
-    whyAiLabel: "🤖 WHY AI RECOMMEND",
-    buyBtn: "🎁 Buy on Amazon",
-    emptyText: "No recommendations yet.\nTry creating a new event!",
-
-    // 알림 메시지
-    alertSuccessTitle: "Success! 🎁",
-    alertSuccessMsg: "AI has picked the perfect gifts!",
-    alertErrorTitle: "Error 😢",
-    alertErrorMsg: "Failed to connect with the AI engine.",
-  },
-  es: {
-    headerTitle: "Recomendaciones IA", // 💡 AI 대신 IA 완벽 반영
-    aiPickTag: "Selección IA",
-    loadingGifts: "Buscando regalos... 🤖",
-    successGifts: "¡Los mejores regalos!🥳",
-    loadingSub:
-      "La IA está buscando los mejores regalos\nque a tus personas les encantarán.",
-    successSub:
-      "¡La IA ha seleccionado los mejores regalos basados en el presupuesto y preferencias!",
-    refreshBtn: "Obtener más ideas 🤖", // 💡 2030 앱 감성으로 가로폭을 맞춰줄 힙한 압축 텍스트
-    sectionTitle: "Los 3 mejores de la IA",
-    whyAiLabel: "🤖 POR QUÉ LO RECOMIENDA LA IA",
-    buyBtn: "🎁 Comprar en Amazon", // 💡 미국 아마존 랜딩 버튼의 완벽한 스패니시화
-    emptyText: "Aún no hay recomendaciones.\n¡Intenta crear un nuevo evento!",
-
-    // 알림 메시지
-    alertSuccessTitle: "¡Éxito! 🎁",
-    alertSuccessMsg: "¡La IA ha elegido los regalos perfectos!",
-    alertErrorTitle: "Error 😢",
-    alertErrorMsg: "No se pudo conectar con el motor de IA.",
-  },
-};
-
 export default function RecommendResultScreen() {
+  const { lang, t } = useRecommendResultsLanguage();
+
   const queryClient = useQueryClient();
   const params = useLocalSearchParams();
   const eventId = Number(params.event_id);
 
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, []);
-
-  const t = translations[lang];
-
-  // 🔍 1. useQuery: 기존에 저장된 추천 목록 가져오기
   const {
     data: savedRecommendations = [],
     refetch: refetchHistory,
@@ -139,7 +62,7 @@ export default function RecommendResultScreen() {
     },
   });
 
-  // 💡 매직 디테일: 페이지 진입 시 데이터 여부를 완벽히 판별하여 최초 AI 가동 및 방어
+  // 페이지 진입 시 데이터 여부를 완벽히 판별하여 최초 AI 가동 및 방어
   useEffect(() => {
     if (isQueryLoading) return;
 
@@ -148,7 +71,7 @@ export default function RecommendResultScreen() {
     }
   }, [eventId, savedRecommendations.length, isQueryLoading]);
 
-  // 성진님의 판단대로, 혼동 방지 및 기기 세션 연동을 위해 amazon.com 영어 순정 링크 규격 그대로 작동!
+  // 혼동 방지 및 기기 세션 연동을 위해 amazon.com 영어 순정 링크 규격 그대로 작동!
   const handleOpenLink = async (url: string) => {
     if (!url) return;
     const supported = await Linking.canOpenURL(url);

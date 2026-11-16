@@ -1,15 +1,17 @@
 "use client";
 import { client } from "@/api/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Localization from "expo-localization";
+import { PURPOSE_EMOJIS } from "@/constants/PURPOSE_EMOJIS";
+import { PURPOSE_TRANSLATIONS } from "@/constants/PURPOSE_TRANSLATIONS";
+import { useDeleteEventMutation } from "@/hooks/history/useDeleteHistoryMutation";
+import { useHistoryLanguage } from "@/hooks/Languages/useHistoryLanguage";
+import { formatSummaryPrice } from "@/utils/formatSummaryPrice";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { Calendar, ChevronRight, Gift, NotepadText } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,136 +21,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-interface GiftEvent {
-  id: number;
-  purpose: string;
-  purpose_display: string;
-  min_budget: number;
-  max_budget: number;
-  created_at: string;
-  recipient_name: string;
-}
-
-// 🎯 보내주신 PURPOSE_LIST와 100% 매칭시킨 이모지 딕셔너리
-const PURPOSE_EMOJIS: Record<string, string> = {
-  FRIEND_BDAY: "🎂",
-  LOVER_BDAY: "❤️",
-  PARENTS_BDAY: "💐",
-  COUPLE_ANNIV: "👩‍❤️‍👨",
-  WED_ANNIV: "💍",
-  REYES_MAGOS: "👑", // 👑 성진님의 초특급 동방박사 세련된 연동 추가!
-  GRADUATE: "🎓",
-  EMPLOY: "💼",
-  HOUSEWARMING: "🏠",
-  WEDDING: "🔔",
-  BRIDAL_SHOWER: "👰",
-  BABY_SHOWER: "🍼",
-  BIRTH: "👶",
-  CHRISTMAS: "🎄",
-  VALENTINE: "💝",
-  MOTHERS_DAY: "👩",
-  FATHERS_DAY: "👨",
-  THANK_YOU: "🙏",
-  GET_WELL: "🩹",
-  SELF_GIFT: "🎁",
-};
-
-// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
-const translations = {
-  en: {
-    headerTitle: "Gift History",
-    loadingText: "Loading your history...",
-    totalMinLabel: "Total Min Budget",
-    totalMaxLabel: "Total Max Budget",
-    sectionTitle: "Past Events",
-    budgetRangeLabel: "Budget Range",
-    viewGiftsBtn: "View Gifts",
-    emptyText: "No recommendation history yet.",
-    dateNotSet: "Date not set",
-
-    // 삭제 컨펌 알림창
-    deleteTitle: "⚠️ Delete History",
-    deleteConfirmMsg: "Are you sure you want to delete the gift history for ",
-    cancelBtn: "Cancel",
-    deleteBtn: "Delete",
-    errorTitle: "Error 😢",
-    deleteErrorMsg: "Something went wrong while deleting this history.",
-  },
-  es: {
-    headerTitle: "Historial de regalos", // 💡 Gift History 매핑
-    loadingText: "Cargando tu historial...",
-    totalMinLabel: "Presupuesto mín. total", // 💡 가로폭 붕괴 방지를 위한 'mín.' 약어 적용
-    totalMaxLabel: "Presupuesto máx. total",
-    sectionTitle: "Eventos pasados",
-    budgetRangeLabel: "Rango de presupuesto",
-    viewGiftsBtn: "Ver regalos", // 💡 깔끔하고 확실한 행동유도(CTA) 표현
-    emptyText: "Aún no tienes historial de \n recomendaciones.",
-    dateNotSet: "Sin fecha definida",
-
-    // 삭제 컨펌 알림창
-    deleteTitle: "⚠️ Eliminar historial",
-    deleteConfirmMsg: "¿De verdad quieres eliminar el historial de regalos de ",
-    cancelBtn: "Cancelar",
-    deleteBtn: "Eliminar",
-    errorTitle: "Error 😢",
-    deleteErrorMsg: "Ocurrió un error al intentar eliminar este historial.",
-  },
-};
-
-// 🎯 백엔드 purpose 코드를 다국어 라벨로 즉시 치환해 줄 매직 딕셔너리!
-const PURPOSE_TRANSLATIONS: Record<string, { en: string; es: string }> = {
-  FRIEND_BDAY: { en: "Friend's BDay", es: "Cumple \n de amistad" },
-  LOVER_BDAY: { en: "Partner's BDay", es: "Cumple \n de mi pareja" },
-  PARENTS_BDAY: { en: "Parents' BDay", es: "Cumple \n de padres" },
-  COUPLE_ANNIV: { en: "Couple Anniv", es: "Aniv. \n de novios" },
-  WED_ANNIV: { en: "Wedding Anniv", es: "Aniv. \n de bodas" },
-  HOUSEWARMING: { en: "Housewarming", es: "Estrenar \n casa" },
-  WEDDING: { en: "Wedding", es: "Boda" },
-  BRIDAL_SHOWER: { en: "Bridal Shower", es: "Despedida" },
-  BABY_SHOWER: { en: "Baby Shower", es: "Baby Shower" },
-  BIRTH: { en: "New Baby", es: "Nacimiento" },
-  THANKS_GIVING: { en: "Thanksgiving", es: "Acción de Gracias" },
-  CHRISTMAS: { en: "Christmas", es: "Navidad" },
-  REYES_MAGOS: { en: "Three Kings", es: "Día de Reyes" },
-  VALENTINE: { en: "Valentine's", es: "San Valentín" },
-  MOTHERS_DAY: { en: "Mother's Day", es: "Día de la Madre" },
-  FATHERS_DAY: { en: "Father's Day", es: "Día del Padre" },
-  GRADUATE: { en: "Graduation", es: "Graduación" },
-  EMPLOY: { en: "New Job", es: "Nuevo \n trabajo" },
-  THANK_YOU: { en: "Thank You", es: "Dar gracias" },
-  GET_WELL: { en: "Get Well", es: "Recuperación" },
-  SELF_GIFT: { en: "For Me", es: "Para mí" },
-};
-
 export default function HistoryScreen() {
+  const { lang, t } = useHistoryLanguage();
   const queryClient = useQueryClient();
 
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ["userProfileHistory"] });
+    }, [queryClient]),
+  );
 
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, []);
+  /////////////////////////////////////////////////////////////////////////////////////////
 
-  const t = translations[lang];
-
-  // 🔍 1. useQuery: 내 프로필 정보 및 중첩 지인 데이터 가져오기
   const { data: userProfile, isLoading } = useQuery({
     queryKey: ["userProfileHistory"],
     queryFn: async () => {
@@ -157,50 +41,37 @@ export default function HistoryScreen() {
     },
   });
 
-  // 🆕 매직 디테일: 사용자가 히스토리 탭 메뉴를 누르고 진입할 때마다 캐시 무효화 및 리프레시 강제 가동!
-  useFocusEffect(
-    React.useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: ["userProfileHistory"] });
-    }, [queryClient]),
-  );
+  /////////////////////////////////////////////////////////////////////////////////////////
 
-  // 🚀 2. 🆕 useMutation: 이벤트(추천 기록) 삭제(DELETE)하기
-  const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: number) => {
-      const response = await client.delete(`gift/event/${eventId}/`);
-      return response.data;
-    },
-    onSuccess: () => {
-      // 삭제 성공 시 유저 프로필 쿼리를 무효화하여 대시보드와 리스트를 실시간 갱신!
-      queryClient.invalidateQueries({ queryKey: ["userProfileHistory"] });
-    },
-    onError: (error: any) => {
-      console.error(
-        "Failed to delete recommendation history:",
-        error.response?.data || error.message,
-      );
-      Alert.alert(t.errorTitle, t.deleteErrorMsg);
-    },
-  });
+  const { mutate: deleteHistoryMutate } = useDeleteEventMutation();
 
-  // 🔍 3. 중첩된 구조(User -> Recipient -> Event)에서 역참조된 이벤트들만 일렬로 평탄화(Flat) 추출
-  const events = React.useMemo(() => {
+  const handleDeleteHistory = (eventId: number, name: string) => {
+    Alert.alert(t.deleteTitle, `${t.deleteConfirmMsg}${name}?`, [
+      { text: t.cancelBtn, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteHistoryMutate(eventId),
+      },
+    ]);
+  };
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+
+  const events = useMemo(() => {
     if (!userProfile || !userProfile.recipients) return [];
 
-    // 유저가 가진 모든 지인들의 events 배열을 하나로 합침
     const flatEvents = userProfile.recipients.flatMap(
       (recipient: any) => recipient.events || [],
     );
 
-    // 최신순 정렬 (created_at이 큰/최신 날짜가 맨 앞으로 오도록 정렬)
     return [...flatEvents].sort((a: any, b: any) => {
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA; // 내림차순 정렬 (최신순)
+      return dateB - dateA;
     });
   }, [userProfile]);
 
-  // 📊 대시보드용 통계 데이터 실시간 계산
   const totalMinBudget = events.reduce(
     (sum: number, item: any) => sum + (item.min_budget || 0),
     0,
@@ -211,22 +82,7 @@ export default function HistoryScreen() {
     0,
   );
 
-  // 💰 달러($) 포맷팅 함수
-  const formatSummaryPrice = (price: number) => {
-    return `$${price.toLocaleString("en-US")}`;
-  };
-
-  // 🗑️ 꾹 눌렀을 때 띄워줄 실수 방지용 삭제 컨펌 알림창
-  const handleLongPress = (eventId: number, name: string) => {
-    Alert.alert(t.deleteTitle, `${t.deleteConfirmMsg}${name}?`, [
-      { text: t.cancelBtn, style: "cancel" },
-      {
-        text: t.deleteBtn,
-        style: "destructive",
-        onPress: () => deleteEventMutation.mutate(eventId),
-      },
-    ]);
-  };
+  /////////////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView
@@ -248,7 +104,7 @@ export default function HistoryScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* 🏆 2. 몽글몽글 대시보드 통계 카드 */}
+          {/* 2. 몽글몽글 대시보드 통계 카드 */}
           <View style={styles.summaryCard}>
             {/* 최소 예산 대시보드 */}
             <View style={styles.summaryItem}>
@@ -287,7 +143,7 @@ export default function HistoryScreen() {
               events.map((item) => {
                 const displayDate = item.created_at
                   ? new Date(item.created_at).toLocaleDateString(
-                      lang === "es" ? "es-US" : "en-US", // 💡 현지 언어 모드에 어울리는 달력 날짜 순서 포맷 자동 연동!
+                      lang === "es" ? "es-US" : "en-US",
                       {
                         year: "numeric",
                         month: "long",
@@ -296,7 +152,6 @@ export default function HistoryScreen() {
                     )
                   : t.dateNotSet;
 
-                // 💡 전달해주신 PURPOSE_LIST 기준 키값에 맞춰 이모지가 유연하게 들어갑니다!
                 const emoji = PURPOSE_EMOJIS[item.purpose] || "💝";
 
                 return (
@@ -305,7 +160,7 @@ export default function HistoryScreen() {
                     style={styles.historyCard}
                     activeOpacity={0.8}
                     onLongPress={() =>
-                      handleLongPress(item.id, item.recipient_name)
+                      handleDeleteHistory(item.id, item.recipient_name)
                     }
                   >
                     {/* 카드 상단: 이모지 + 타이틀 + 완료 체크 배지 */}
@@ -384,6 +239,8 @@ export default function HistoryScreen() {
     </SafeAreaView>
   );
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

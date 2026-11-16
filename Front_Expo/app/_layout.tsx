@@ -18,7 +18,6 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -27,7 +26,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
-
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -45,7 +43,6 @@ export default function RootLayout() {
       });
     }
   }, []);
-
 
   useEffect(() => {
     if (error) throw error;
@@ -68,8 +65,8 @@ const MyGiftAppTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: "#fdb0cf", // 틴트/포인트 컬러를 핑크로!
-    background: "#fff3f6", // 앱 기본 배경을 완전 깨끗한 흰색으로!
+    primary: "#fdb0cf",
+    background: "#fff3f6",
   },
 };
 
@@ -84,8 +81,8 @@ function RootLayoutNav() {
               headerShown: false,
             }}
           >
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: "modal" }} />
           </Stack>
         </APIProvider>

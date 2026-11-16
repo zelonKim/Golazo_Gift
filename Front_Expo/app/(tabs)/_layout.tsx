@@ -1,60 +1,17 @@
 "use client";
+import { useTabLayoutLanguage } from "@/hooks/Languages/useTabLayoutLanguage";
 import { useTheme } from "@react-navigation/native";
-import * as Localization from "expo-localization";
 
 import { Tabs } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { Gift, History, Home, Settings2, UserPlus } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-
 export default function TabLayout() {
+  const { t } = useTabLayoutLanguage();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  // 🪄 기기 설정 언어 및 기존 저장 세션 스캔
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, []);
-
-
-
-  const t = {
-    en: {
-      home: "Home",
-      people: "People",
-      recommend: "AI Recs",
-      history: "History",
-      settings: "Settings",
-      results: "Results",
-    },
-    es: {
-      home: "Inicio",
-      people: "Conocides", // 💡 Personas 대신 5글자로 압축!
-      recommend: "Ideas IA", // 💡 Recomendaciones 대신 8글자 꿀조합!
-      history: "Historial",
-      settings: "Ajustes", // 💡 Configuración 쓰면 무조건 UI 터집니다. Ajustes가 신의 한 수!
-      results: "Resultados",
-    },
-  }[lang];
 
   const tabBarHeight =
     Platform.OS === "ios"
@@ -97,7 +54,6 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* 1. 홈 탭 */}
       <Tabs.Screen
         name="index"
         options={{
@@ -112,7 +68,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. 지인 관리 탭 */}
       <Tabs.Screen
         name="recipient"
         options={{
@@ -127,7 +82,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. AI 선물 추천 탭 */}
       <Tabs.Screen
         name="recommend"
         options={{
@@ -142,7 +96,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. 히스토리 탭 */}
       <Tabs.Screen
         name="history"
         options={{
@@ -157,7 +110,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 5. 마이페이지 탭 */}
       <Tabs.Screen
         name="mypage"
         options={{

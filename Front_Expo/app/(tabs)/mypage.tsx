@@ -1,9 +1,9 @@
 "use client";
 import { client } from "@/api/client";
-import { useTheme } from "@react-navigation/native";
+import { useMyPageLanguage } from "@/hooks/Languages/useMyPageLanguage";
+import { UserProfile } from "@/types/UserProfile";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
-import * as Localization from "expo-localization";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -16,11 +16,10 @@ import {
   UserX,
   X,
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -36,147 +35,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-interface UserProfile {
-  id: number;
-  username: string;
-  email: string;
-  nickname?: string | null;
-  recipients?: any[];
-}
-
-// 🎯 미국 내 히스패닉 맞춤형 마이페이지 텍스트 딕셔너리
-const translations = {
-  en: {
-    headerTitle: "My Profile",
-    welcomeTag: "Welcome 👋",
-    defaultNickname: "Set your nickname",
-    statPerson: "person",
-    statPeople: "people",
-    statEvent: "event",
-    statEvents: "events",
-    statLovedOnes: "Loved Ones",
-    statEventsSaved: "Events Saved",
-
-    // 설정 목록
-    sectionSettings: "Settings",
-    menuNicknameTitle: "Set & Edit Nickname",
-    menuNicknameSub: "Update the name shown in the app",
-    menuLogoutTitle: "Log Out",
-    menuLogoutSub: "Sign out of your account",
-    menuPrivacyTitle: "Privacy Policy",
-    menuPrivacySub: "Read about how we protect your info",
-    menuDeleteTitle: "Delete Account",
-    menuDeleteSub: "Permanently delete account",
-
-    // 모달 및 입력창
-    newNicknameLabel: "New Nickname",
-    placeholderNickname: "Enter your nickname",
-    saveChangesBtn: "Save Changes",
-
-    // 알림창 멘트
-    noticeTitle: "Notice",
-    enterNicknameAlert: "Please enter your nickname!",
-    successTitle: "Success 🎉",
-    successMsg: "Your nickname has been updated successfully.",
-    errorTitle: "Error 😢",
-    updateErrorMsg: "Failed to update nickname.",
-
-    logoutTitle: "Log Out",
-    logoutConfirmMsg: "Are you sure you want to log out?",
-    cancelBtn: "Cancel",
-
-    deleteTitle: "⚠️ Delete Account",
-    deleteConfirmMsg:
-      "Are you sure you want to delete your account?\n\nAll registered friends and gift recommendation history will be permanently deleted and cannot be restored.",
-    deleteBtn: "Delete",
-    deleteSuccessTitle: "Account Deleted",
-    deleteSuccessMsg:
-      "We're sad to see you go. Thank you for using our service.",
-    deleteErrorMsg: "Failed to delete account. Please try again.",
-  },
-  es: {
-    headerTitle: "Mi perfil", // 💡 My Profile 매핑
-    welcomeTag: "¡Hola! 👋", // 💡 입에 착 붙는 라틴계 첫인사 적용
-    defaultNickname: "Define tu apodo",
-    statPerson: "conocide",
-    statPeople: "conocides",
-    statEvent: "evento",
-    statEvents: "eventos",
-    statLovedOnes: "Seres queridos",
-    statEventsSaved: "Eventos guardados",
-
-    // 설정 목록
-    sectionSettings: "Ajustes",
-    menuNicknameTitle: "Modificar apodo", // 💡 가로폭이 터지지 않는 세련되고 컴팩트한 번역
-    menuNicknameSub: "Edita tu nombre de perfil",
-    menuLogoutTitle: "Cerrar sesión",
-    menuLogoutSub: "Salir de tu cuenta en este dispositivo",
-    menuPrivacyTitle: "Política de privacidad",
-    menuPrivacySub: "Cómo cuidamos tu info",
-    menuDeleteTitle: "Eliminar cuenta",
-    menuDeleteSub: "Borrar tu cuenta permanentemente",
-
-    // 모달 및 입력창
-    newNicknameLabel: "Nuevo apodo",
-    placeholderNickname: "Escribe tu apodo",
-    saveChangesBtn: "Guardar cambios",
-
-    // 알림창 멘트
-    noticeTitle: "Aviso",
-    enterNicknameAlert: "¡Por favor, escribe tu apodo!",
-    successTitle: "¡Éxito! 🎉",
-    successMsg: "Tu apodo ha sido actualizado con éxito.",
-    errorTitle: "Error 😢",
-    updateErrorMsg: "No se pudo actualizar el apodo.",
-
-    logoutTitle: "Cerrar sesión",
-    logoutConfirmMsg: "¿De verdad quieres cerrar sesión?",
-    cancelBtn: "Cancelar",
-
-    deleteTitle: "⚠️ Eliminar cuenta",
-    deleteConfirmMsg:
-      "¿De verdad quieres eliminar tu cuenta?\n\nTodos tus amistads registrados e historial de recomendaciones se borrarán permanentemente y no se podrán recuperar.",
-    deleteBtn: "Eliminar",
-    deleteSuccessTitle: "Cuenta eliminada",
-    deleteSuccessMsg:
-      "Nos da pena verte partir. Gracias por usar nuestro servicio.",
-    deleteErrorMsg: "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
-  },
-};
-
 export default function MyPageScreen() {
-  const { colors } = useTheme();
+  const { lang, t } = useMyPageLanguage();
+
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [isAlarmEnabled, setIsAlarmEnabled] = useState(true);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [inputNickname, setInputNickname] = useState("");
-
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, []);
-
-  const t = translations[lang];
 
   // 🔍 1. useQuery: 내 프로필 정보 실시간 조회 (GET /user/me/)
   const { data: profile, isLoading } = useQuery<UserProfile>({

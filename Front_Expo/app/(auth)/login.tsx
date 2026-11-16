@@ -1,17 +1,16 @@
 "use client";
-import { client } from "@/api/client";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { useMutation } from "@tanstack/react-query";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as Localization from "expo-localization";
+import { useLoginMutation } from "@/hooks/auth/useLoginMutation";
+import { useSocialLoginMutation } from "@/hooks/auth/useSocialLoginMutation";
+import { useLoginLanguage } from "@/hooks/Languages/useLoginLanguage";
+import { configureGoogleSignIn } from "@/utils/googleSignIn";
+import { handleAppleLogin } from "@/utils/handleAppleLogin";
+import { handleGoogleLogin } from "@/utils/handleGoogleLogin";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { Lock, Mail } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Keyboard,
   Platform,
@@ -25,213 +24,37 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-interface SocialLoginData {
-  provider: "google" | "apple";
-  token: string;
-}
-
-// 🎯 미국 내 히스패닉(US-Spanish) 사용 패턴을 200% 반영한 번역 딕셔너리
-const translations = {
-  en: {
-    subTitle: "Find gifts they'll actually love",
-    emailPlaceholder: "Enter your email",
-    passwordPlaceholder: "Enter your password",
-    loginBtn: "Log In",
-    noAccount: "Don't have an account?",
-    signUp: " Sign Up ",
-    divider: "Or continue with",
-    guestBtn: "Continue as guest",
-    requiredAlert: "Required",
-    requiredAlertMsg: "Please enter both your email and password.",
-    authErrorTitle: "Authentication Error",
-    authErrorMsg: "Failed to process token. Please try again.",
-    loginFailTitle: "Login Failed",
-    loginFailMsg: "Please check your email or password again.",
-    socialFailMsg: "Social authentication failed.",
-    appleLoginNotSupported: "Apple login is only supported on iOS devices.",
-  },
-  es: {
-    subTitle: "Le encantó el regalo, ¡fue un golazo!",
-    emailPlaceholder: "Ingresa tu correo electrónico",
-    passwordPlaceholder: "Ingresa tu contraseña",
-    loginBtn: "Iniciar sesión",
-    noAccount: "¿No tienes una cuenta?",
-    signUp: " Crea una cuenta ",
-    divider: "O continúa con",
-    guestBtn: "Continuar como invitado",
-    requiredAlert: "Obligatorio",
-    requiredAlertMsg: "Por favor, ingresa tu correo y contraseña.",
-    authErrorTitle: "Error de autenticación",
-    authErrorMsg: "Error al procesar el token. Inténtalo de nuevo.",
-    loginFailTitle: "Error de inicio de sesión",
-    loginFailMsg: "Por favor, comprueba tu correo o contraseña.",
-    socialFailMsg: "Error en la autenticación social.",
-    appleLoginNotSupported:
-      "El inicio de sesión con Apple solo es compatible con dispositivos iOS.",
-  },
-};
-
-GoogleSignin.configure({
-  webClientId:
-    "520508328364-1mhi8jtom62gn4kvhlupbm08hpa92n29.apps.googleusercontent.com",
-  iosClientId:
-    "520508328364-371ttf20f36iumci7k0q2lht6om5g0u3.apps.googleusercontent.com",
-  offlineAccess: true,
-});
-
 export default function LoginScreen() {
+  const { lang, t } = useLoginLanguage();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [lang, setLang] = useState<"en" | "es">("en");
 
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
   useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0]?.languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
+    configureGoogleSignIn();
   }, []);
 
-  const t = translations[lang];
-
-  const handleLoginSuccess = async (data: any) => {
-    try {
-      const accessToken = data.tokens?.access || data.tokens;
-      if (accessToken) {
-        await SecureStore.setItemAsync("userToken", accessToken);
-        await SecureStore.setItemAsync("userLang", lang);
-        router.replace("/(tabs)");
-      } else {
-        throw new Error("발급된 인증 토큰이 존재하지 않습니다.");
-      }
-    } catch (error) {
-      console.error("로그인 토큰 저장 중 에러:", error);
-      Alert.alert(t.authErrorTitle, t.authErrorMsg);
-    }
-  };
+  /////////////////////////////////////////////////////////////////////////////////////////
 
   // 일반 로그인
-  const loginMutation = useMutation({
-    mutationFn: async (loginData: LoginData) => {
-      const response = await client.post("user/login/", loginData);
-      return response.data;
-    },
-    onSuccess: handleLoginSuccess,
-    onError: (error: any) => {
-      console.error("로그인 실패 원인:", error.response?.data);
-      const serverError = error.response?.data?.error;
-      const errorMsg = serverError || t.loginFailMsg;
-      Alert.alert(t.loginFailTitle, errorMsg);
-    },
-  });
-
-  // 소셜 로그인
-  const socialLoginMutation = useMutation({
-    mutationFn: async (socialData: SocialLoginData) => {
-      const response = await client.post(`user/${socialData.provider}/login/`, {
-        token: socialData.token,
-      });
-      return response.data;
-    },
-    onSuccess: handleLoginSuccess,
-    onError: (error: any) => {
-      console.error("소셜 로그인 실패 원인:", error.response?.data);
-      Alert.alert(t.loginFailTitle, t.socialFailMsg);
-    },
-  });
+  const { mutate: loginMutate, isPending: loginPending } = useLoginMutation();
 
   const handleLogin = () => {
     if (!email || !password) {
       Alert.alert(t.requiredAlert, t.requiredAlertMsg);
       return;
     }
-    loginMutation.mutate({ email, password });
+    loginMutate({ email, password });
   };
 
+  /////////////////////////////////////////////////////////////////////////////////////////
 
+  // 소셜 로그인
+  const { mutate: socialLoginMutate, isPending: socialLoginPending } =
+    useSocialLoginMutation();
 
-
-// 🌐 구글 로그인 연동 (안정화 버전)
-const handleGoogleLogin = async () => {
-  try {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-    // 잔재 세션 정리 (이전 로그인 세션 꼬임 방지)
-    await GoogleSignin.signOut().catch(() => {});
-
-    // 인자 없이 기본 signIn() 호출
-    const response = await GoogleSignin.signIn();
-
-    // v11+ 라이브러리 반응형 대응 (response.data.idToken 또는 response.idToken)
-    const idToken = response.data?.idToken || (response as any).idToken;
-
-    if (idToken) {
-      socialLoginMutation.mutate({
-        provider: "google",
-        token: idToken,
-      });
-    } else {
-      Alert.alert("Error", "Can not retrieve Google ID token.");
-    }
-  } catch (error: any) {
-    console.error("구글 로그인 에러:", error);
-    if (error.code !== "ASYNC_OP_IN_PROGRESS") {
-      Alert.alert(
-        "Google Login Error",
-        `Code: ${error.code}\nMessage: ${error.message || JSON.stringify(error)}`
-      );
-    }
-  }
-};
-
-  // 🍏 애플 로그인 연동
-  const handleAppleLogin = async () => {
-    if (Platform.OS === "android") {
-      Alert.alert("Notice", t.appleLoginNotSupported);
-      return;
-    }
-
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      if (credential.identityToken) {
-        socialLoginMutation.mutate({
-          provider: "apple",
-          token: credential.identityToken,
-        });
-      } else {
-        Alert.alert("Error", "Can not retrieve Apple identity token.");
-      }
-    } catch (error: any) {
-      if (error.code !== "ERR_REQUEST_CANCELED") {
-        Alert.alert("Error", "Failed to log in with Apple.");
-      }
-    }
-  };
+  /////////////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: "#FFFBFB" }]}>
@@ -242,10 +65,14 @@ const handleGoogleLogin = async () => {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.content}>
-            {/* 상단 인트로 타이틀 */}
             <View style={styles.welcomeSection}>
-              <Text style={styles.subTitle}>{t.subTitle}</Text>
+              <Image
+                source={require("../../assets/images/miniGifty.png")}
+                style={styles.imageStyle}
+              />
+
               <Text style={styles.mainTitle}>Golazo Gift</Text>
+              <Text style={styles.subTitle}>{t.subTitle}</Text>
             </View>
 
             {/* 폼 영역 */}
@@ -281,15 +108,12 @@ const handleGoogleLogin = async () => {
             <TouchableOpacity
               style={[
                 styles.cuteButton,
-                (loginMutation.isPending || socialLoginMutation.isPending) &&
-                  styles.disabledButton,
+                (loginPending || socialLoginPending) && styles.disabledButton,
               ]}
               onPress={handleLogin}
-              disabled={
-                loginMutation.isPending || socialLoginMutation.isPending
-              }
+              disabled={loginPending || socialLoginPending}
             >
-              {loginMutation.isPending || socialLoginMutation.isPending ? (
+              {loginPending || socialLoginPending ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.cuteButtonText}>{t.loginBtn}</Text>
@@ -312,12 +136,14 @@ const handleGoogleLogin = async () => {
                 <View style={styles.dividerLine} />
               </View>
 
-              {socialLoginMutation.isPending ? (
+              {socialLoginPending ? (
                 <ActivityIndicator color="#FF7096" size="large" />
               ) : (
                 <View style={styles.socialButtonRow}>
                   {/* 구글 로그인 */}
-                  <TouchableOpacity onPress={handleGoogleLogin}>
+                  <TouchableOpacity
+                    onPress={() => handleGoogleLogin({ socialLoginMutate })}
+                  >
                     <Image
                       source={require("@/assets/images/google_login.png")}
                       style={styles.googleIcon}
@@ -325,7 +151,14 @@ const handleGoogleLogin = async () => {
                   </TouchableOpacity>
 
                   {/* 애플 로그인 */}
-                  <TouchableOpacity onPress={handleAppleLogin}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleAppleLogin({
+                        socialLoginMutate,
+                        appleLoginNotSupportedMsg: t.appleLoginNotSupported,
+                      })
+                    }
+                  >
                     <Image
                       source={require("@/assets/images/apple_login.png")}
                       style={styles.appleIcon}
@@ -334,7 +167,6 @@ const handleGoogleLogin = async () => {
                 </View>
               )}
 
-              {/* 게스트 로그인 */}
               <TouchableOpacity
                 style={styles.guestButton}
                 onPress={() => router.replace("/quickRecommend")}
@@ -348,6 +180,7 @@ const handleGoogleLogin = async () => {
     </SafeAreaView>
   );
 }
+/////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -369,6 +202,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 6,
     textAlign: "center",
+    marginTop: Platform.OS === "ios" ? 5 : 2,
   },
   mainTitle: {
     fontSize: 26,
@@ -446,5 +280,9 @@ const styles = StyleSheet.create({
     color: "#AEAEB2",
     borderBottomWidth: 0.9,
     borderBottomColor: "#AEAEB2",
+  },
+  imageStyle: {
+    width: 100,
+    height: 85,
   },
 });

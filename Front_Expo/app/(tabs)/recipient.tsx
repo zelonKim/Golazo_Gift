@@ -1,15 +1,14 @@
 "use client";
 import { client } from "@/api/client";
-import { useTheme } from "@react-navigation/native";
+import { useRecipientLanguage } from "@/hooks/Languages/useRecipientLanguage";
+import { GenderChoices } from "@/types/GenderChoices";
+import { Recipient } from "@/types/Recipient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Localization from "expo-localization";
-import * as SecureStore from "expo-secure-store";
 import { Edit2, Plus, Trash2, User, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Keyboard,
   Modal,
   Platform,
@@ -24,141 +23,17 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-// 🧬 백엔드 모델 스펙에 완벽 호환되도록 gender 타입 확장
-interface Recipient {
-  id: number;
-  name: string;
-  gender: "M" | "F" | "N" | "P"; // 백엔드 GENDER_CHOICES 반영
-  age_group: string;
-  mbti?: string | null;
-  hobbies?: string | null;
-  notes?: string | null;
-}
-
-// 🎯 미국 내 히스패닉 맞춤형 텍스트 딕셔너리
-const translations = {
-  en: {
-    headerTitle: "My People",
-    loadingText: "Loading friends...",
-    noPeople: "No People added yet.",
-    noPeopleSub: "Tap the [+] button in the top right \nto add someone.",
-    hobbiesLabel: "Hobbies",
-    notesLabel: "Notes",
-
-    // 모달 타이틀 & 입력 라벨
-    editTitle: "Edit Information",
-    addTitle: "Add Friend",
-    nameLabel: "👋 Name / Nickname",
-    namePlaceholder: "e.g. Mom, Boyfriend, Alex",
-    genderLabel: "🧬 Gender",
-    genderM: "👨 Male",
-    genderF: "👩 Female",
-    genderN: "🌈 Non-binary",
-    genderP: "🧸 Private",
-    ageLabel: "🎂 Age Group",
-    hobbiesInputLabel: "🎨 Hobbies / Interests (Optional)",
-    hobbiesPlaceholder: "e.g. Reading, Hiking, Cooking",
-    notesInputLabel: "⭐️ Notes / Preferences (Optional)",
-    notesPlaceholder: "e.g. Dislikes strong perfumes, owns a cat",
-    saveBtn: "Save Changes",
-    addBtn: "Add +",
-
-    // 성별 / 나이대 UI 노출용 단어
-    genderMaleShort: "Male",
-    genderFemaleShort: "Female",
-    genderNonbinaryShort: "Non-binary",
-    genderPrivateShort: "Private",
-    ageUnder10: "Under 10",
-    ageOver80: "80s+",
-
-    // 시스템 팝업 및 가이드
-    requiredTitle: "Required",
-    requiredNameMsg: "Please enter a name.",
-    requiredGenderMsg: "Please select a gender preference.",
-    requiredAgeMsg: "Please select an age group.",
-    successTitle: "Success",
-    addSuccessMsg: "Friend added successfully.",
-    saveSuccessTitle: "Saved",
-    saveSuccessMsg: "Information updated successfully.",
-    deleteTitle: "Delete Friend",
-    deleteConfirm: 'Are you sure you want to delete "{content}"?',
-    deleteCancel: "Cancel",
-    deleteBtn: "Delete",
-    deleteSuccessTitle: "Deleted 🌊",
-    deleteSuccessMsg: "Friend removed from your list.",
-    failTitle: "Failed",
-    failMsg: "Please check your information and try again.",
-  },
-  es: {
-    headerTitle: "Mis seres queridos", // 💡 'My People'을 가독성 높고 애정 어린 단어로 번역
-    loadingText: "Cargando lista...",
-    noPeople: "Aún no has agregado a nadie.",
-    noPeopleSub:
-      "Toca el botón [+] en la esquina superior\nderecha para agregar a alguien.",
-    hobbiesLabel: "Hobbies",
-    notesLabel: "Notas",
-
-    // 모달 타이틀 & 입력 라벨
-    editTitle: "Editar información",
-    addTitle: "Agregar conocide",
-    nameLabel: "👋 Nombre / Apodo",
-    namePlaceholder: "Ej. Mamá, Novio, Alex", // 💡 히스패닉 감성 맞춤 예시
-    genderLabel: "🧬 Género",
-    genderM: "👨 Hombre",
-    genderF: "👩 Mujer",
-    genderN: "🌈 No binario",
-    genderP: "🧸 Privado",
-    ageLabel: "🎂 Grupo de edad",
-    hobbiesInputLabel: "🎨 Hobbies / Intereses (Opcional)",
-    hobbiesPlaceholder: "Ej. Lectura, Senderismo, Cocina",
-    notesInputLabel: "⭐️ Notas / Preferencias (Opcional)",
-    notesPlaceholder: "Ej. No le gustan los perfumes fuertes, tiene un gato",
-    saveBtn: "Guardar cambios",
-    addBtn: "Agregar +",
-
-    // 성별 / 나이대 UI 노출용 단어
-    genderMaleShort: "Hombre",
-    genderFemaleShort: "Mujer",
-    genderNonbinaryShort: "No binario",
-    genderPrivateShort: "Privado",
-    ageUnder10: "Menor de 10",
-    ageOver80: "80 o más",
-
-    // 시스템 팝업 및 가이드
-    requiredTitle: "Obligatorio",
-    requiredNameMsg: "Por favor, ingresa un nombre.",
-    requiredGenderMsg: "Por favor, selecciona un género.",
-    requiredAgeMsg: "Por favor, selecciona un grupo de edad.",
-    successTitle: "Éxito",
-    addSuccessMsg: "Agregado con éxito a tu lista.",
-    saveSuccessTitle: "Guardado",
-    saveSuccessMsg: "Información actualizada con éxito.",
-    deleteTitle: "Eliminar conocide",
-    deleteConfirm: '¿Estás seguro de que quieres eliminar a "{content}"?',
-    deleteCancel: "Cancelar",
-    deleteBtn: "Eliminar",
-    deleteSuccessTitle: "Eliminado 🌊",
-    deleteSuccessMsg: "Eliminado con éxito de tu lista.",
-    failTitle: "Error",
-    failMsg: "Por favor, comprueba tus datos e inténtalo de nuevo.",
-  },
-};
-
 export default function RecipientScreen() {
-  const { colors } = useTheme();
+  const { lang, t } = useRecipientLanguage();
   const queryClient = useQueryClient();
 
-  // 📝 모달 및 폼 상태 관리
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(
     null,
   );
 
-  // 📝 입력 필드 스테이트 (기본값을 백엔드 default와 동일한 "P"로 설정)
   const [name, setName] = useState("");
-  const [gender, setGender] = useState<"M" | "F" | "N" | "P">("P");
+  const [gender, setGender] = useState<GenderChoices>("P");
   const [ageGroup, setAgeGroup] = useState("");
   const [hobbies, setHobbies] = useState("");
   const [notes, setNotes] = useState("");
@@ -168,30 +43,6 @@ export default function RecipientScreen() {
   const [mbtiSN, setMbtiSN] = useState<"S" | "N" | null>(null);
   const [mbtiTF, setMbtiTF] = useState<"T" | "F" | null>(null);
   const [mbtiJP, setMbtiJP] = useState<"J" | "P" | null>(null);
-
-  // 💡 글로벌 언어 상태 (기본값: 'en')
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  // 🪄 기기 언어 탐색 및 기존 세션 유무 방어
-  useEffect(() => {
-    const initLanguage = async () => {
-      const savedLang = await SecureStore.getItemAsync("userLang");
-      if (savedLang === "es" || savedLang === "en") {
-        setLang(savedLang);
-      } else {
-        const locale = Localization.getLocales()[0].languageCode;
-        if (locale && locale.startsWith("es")) {
-          setLang("es");
-        } else {
-          setLang("en");
-        }
-      }
-    };
-    initLanguage();
-  }, [isFormModalVisible]);
-
-  // 현재 언어셋 활성화
-  const t = translations[lang];
 
   const ageGroups = [
     t.ageUnder10,

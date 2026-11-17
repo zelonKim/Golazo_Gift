@@ -1,51 +1,14 @@
 "use client";
 
+import { useHomeLanguage } from "@/hooks/Languages/useHomeLanguage";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
-
-// 🎯 미국 내 히스패닉 타겟용 콤팩트 다국어 딕셔너리
-const translations = {
-  en: {
-    badgeText: "AI Gift Recs",
-    mainTitleLine1: "No More Gift Stress",
-    mainTitleHighlight: "Let Golazo AI Pick",
-    subTitle:
-      "Just enter a few simple details about the recipient. Our AI will pick a fail-proof list of the best gift ideas.",
-    ctaBtn: "Get Started for Free 🤖",
-    privacy: "Privacy Policy",
-    rights: "© 2026 Golazo. All rights reserved.",
-  },
-  es: {
-    badgeText: "Regalos IA", // 💡 성진님의 시그니처 4글자 절약 조합!
-    mainTitleLine1: "Sin estrés por regalar", // 💡 자연스러운 현지어 의역
-    mainTitleHighlight: "Golazo IA elige", // 💡 "골라조 IA가 널 위해 해줄게"
-    subTitle:
-      "Solo ingresa algunos datos sobre esa persona. Nuestra IA elegirá la lista perfecta de regalos ideales.",
-    ctaBtn: "Comenzar gratis 🤖", // 💡 가로 레이아웃을 해치지 않는 콤팩트한 CTA
-    privacy: "Política de privacidad",
-    rights: "© 2026 Golazo. Todos los derechos reservados.",
-  },
-};
+import React from "react";
 
 export default function HomePage() {
-  // 💡 SSR 하이드레이션 오류 방지를 위해 기본값은 영어('en')로 설정
-  const [lang, setLang] = useState<"en" | "es">("en");
-
-  useEffect(() => {
-    // 🪄 브라우저 기본 언어 감지 치트키 작동!
-    const browserLang = navigator.language;
-    if (browserLang && browserLang.startsWith("es")) {
-      setLang("es");
-    } else {
-      setLang("en");
-    }
-  }, []);
-
-  const t = translations[lang];
+  const { t } = useHomeLanguage();
 
   return (
     <div className="min-h-screen bg-rose-50 flex flex-col justify-between font-sans">
-      {/* 히어로 섹션 */}
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-3xl mx-auto py-20">
         <div className="flex-inline animate-bounce inline-flex items-center gap-1.5 bg-white/80 border border-pink-50/90 text-pink-500 font-bold px-3 py-1 rounded-full text-[12.5px] uppercase tracking-wider mb-3 shadow-sm shadow-pink-100/50">
           <div className="text-[18px]">🎁</div> {t.badgeText}
@@ -62,7 +25,6 @@ export default function HomePage() {
           {t.subTitle}
         </p>
 
-        {/* CTA 버튼 */}
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center items-center">
           <Link
             href="/recommend"
@@ -73,7 +35,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* 푸터 */}
       <footer className="border-t border-slate-50 bg-white py-3 sm:py-6 text-center text-sm text-slate-500">
         <div className="mx-6 px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>{t.rights}</p>

@@ -1,16 +1,17 @@
 "use client";
-import { client } from "@/api/client";
+import { fetchRecommendedProducts } from "@/api/recs/fetchRecommendedProducts";
 import { useRecommendResultsLanguage } from "@/hooks/Languages/useRecommendResultsLanguage";
+import { useRecommendMutation } from "@/hooks/recs/useRecommendMutation";
 import { RecommendedProduct } from "@/types/RecommendedProduct";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatSummaryPrice } from "@/utils/formatSummaryPrice";
+import { handleOpenLink } from "@/utils/handleOpenLink";
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, CheckCircle, Gift, ShoppingBag } from "lucide-react-native";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,68 +22,44 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RecommendResultScreen() {
-  const { lang, t } = useRecommendResultsLanguage();
+  const { t } = useRecommendResultsLanguage();
 
-  const queryClient = useQueryClient();
   const params = useLocalSearchParams();
   const eventId = Number(params.event_id);
 
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
   const {
     data: savedRecommendations = [],
-    refetch: refetchHistory,
-    isLoading: isQueryLoading,
+    isPending: savedRecsPending,
   } = useQuery<RecommendedProduct[]>({
     queryKey: ["recommendedProducts", eventId],
-    queryFn: async () => {
-      const response = await client.get(
-        `gift/event/${eventId}/recommended-products/`,
-      );
-      return response.data;
-    },
+    queryFn: () => fetchRecommendedProducts(eventId),
     enabled: !!eventId,
   });
-  console.log("🛍️ 저장된 상품:", savedRecommendations);
 
-  // 🚀 2. useMutation: AI 엔진 추천 요청 API
-  const recommendMutation = useMutation({
-    mutationFn: async () => {
-      const response = await client.post(`gift/event/${eventId}/recommend/`);
-      return response.data.recommendations;
-    },
-    onSuccess: () => {
-      refetchHistory();
-      Alert.alert(t.alertSuccessTitle, t.alertSuccessMsg);
-    },
-    onError: (error: any) => {
-      console.error(
-        "AI Recommendation Failed:",
-        error.response?.data || error.message,
-      );
-      Alert.alert(t.alertErrorTitle, t.alertErrorMsg);
-    },
-  });
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
-  // 페이지 진입 시 데이터 여부를 완벽히 판별하여 최초 AI 가동 및 방어
+  const {
+    mutate: recommendMutate,
+    isPending: recommendPending,
+    data: recommendedData,
+    reset: recommendReset,
+  } = useRecommendMutation(eventId);
+
   useEffect(() => {
-    if (isQueryLoading) return;
+    if (savedRecsPending) return;
 
     if (eventId && savedRecommendations.length === 0) {
-      recommendMutation.mutate();
+      recommendMutate(eventId);
     }
-  }, [eventId, savedRecommendations.length, isQueryLoading]);
+  }, [eventId, savedRecommendations.length, savedRecsPending]);
 
-  // 혼동 방지 및 기기 세션 연동을 위해 amazon.com 영어 순정 링크 규격 그대로 작동!
-  const handleOpenLink = async (url: string) => {
-    if (!url) return;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
-  };
+  const displayItems = recommendedData || savedRecommendations;
 
-  // 💰 미국 현지 느낌에 맞는 달러($) 포맷팅 적용
-  const formatPrice = (price: number) => `$${price.toLocaleString("en-US")}`;
-  const displayItems = recommendMutation.data || savedRecommendations;
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
-  if (isQueryLoading && displayItems.length === 0) {
+  if (savedRecsPending && displayItems.length === 0) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: "#FFFBFB" }]}
@@ -95,12 +72,13 @@ export default function RecommendResultScreen() {
     );
   }
 
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: "#FFFBFB" }]}
       edges={["top"]}
     >
-      {/* 아기자기한 상단 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -115,7 +93,6 @@ export default function RecommendResultScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ✨ 2. AI 분석 작동 제어 보드 */}
         <View style={styles.cloudCard}>
           <View style={styles.bubbleTag}>
             <CheckCircle
@@ -126,19 +103,18 @@ export default function RecommendResultScreen() {
             <Text style={styles.bubbleTagText}>{t.aiPickTag}</Text>
           </View>
           <Text style={styles.mainCardTitle}>
-            {recommendMutation.isPending ? t.loadingGifts : t.successGifts}
+            {recommendPending ? t.loadingGifts : t.successGifts}
           </Text>
           <Text style={styles.mainCardSub}>
-            {recommendMutation.isPending ? t.loadingSub : t.successSub}
+            {recommendPending ? t.loadingSub : t.successSub}
           </Text>
 
-          {/* 다시 추천받기 버튼 */}
-          {!recommendMutation.isPending && (
+          {!recommendPending && (
             <TouchableOpacity
               style={styles.cuteButton}
               onPress={() => {
-                recommendMutation.reset();
-                recommendMutation.mutate();
+                recommendReset();
+                recommendMutate(eventId);
               }}
             >
               <Text style={styles.cuteButtonText}>{t.refreshBtn}</Text>
@@ -146,7 +122,6 @@ export default function RecommendResultScreen() {
           )}
         </View>
 
-        {/* 3. 추천 결과 상품 리스트 영역 */}
         <View style={styles.sectionContainer}>
           <View style={{ flexDirection: "row" }}>
             <Gift
@@ -161,7 +136,7 @@ export default function RecommendResultScreen() {
             <Text style={styles.sectionTitle}>{t.sectionTitle}</Text>
           </View>
 
-          {recommendMutation.isPending ? (
+          {recommendPending ? (
             <View style={styles.loaderBox}>
               <ActivityIndicator size="small" color="#FF7096" />
             </View>
@@ -187,7 +162,7 @@ export default function RecommendResultScreen() {
                       {item.product_name}
                     </Text>
                     <Text style={styles.productPrice}>
-                      {formatPrice(item.product_price)}
+                      {formatSummaryPrice(item.product_price)}
                     </Text>
                   </View>
                 </View>
@@ -210,7 +185,6 @@ export default function RecommendResultScreen() {
                   <Text style={styles.linkButtonText}>{t.buyBtn}</Text>
                 </TouchableOpacity>
 
-                {/* 🌟 미국 연방거래위원회(FTC) 필수 명시 문구 (글로벌 표준 영문 유지) */}
                 <Text style={styles.amazonNotice} numberOfLines={1}>
                   As an Amazon Associate, I earn from qualifying purchases.
                 </Text>
@@ -227,6 +201,8 @@ export default function RecommendResultScreen() {
     </SafeAreaView>
   );
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingBottom: 48 },

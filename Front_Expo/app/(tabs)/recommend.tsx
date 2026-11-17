@@ -1,11 +1,13 @@
 "use client";
-import { client } from "@/api/client";
+import { fetchRecipients } from "@/api/recipient/fetchRecipients";
+import { useCreateEventMutation } from "@/hooks/event/useCreateEventMutation";
 import { useRecommendLanguage } from "@/hooks/Languages/useRecommendLanguage";
+import { CreateEventDto } from "@/types/CreateEventDto";
 import { Recipient } from "@/types/Recipient";
 import { getPurposeList } from "@/utils/getPurposeList";
 import { toDisplayValue } from "@/utils/toDisplayValue";
 import { toRefineNumber } from "@/utils/toRefineNumber";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { User, UserPlus } from "lucide-react-native";
 import React, { useState } from "react";
@@ -26,65 +28,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function RecommendScreen() {
   const { t, lang } = useRecommendLanguage();
 
-  const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(
-    null,
-  );
   const [eventPurpose, setEventPurpose] = useState("");
   const [minBudget, setMinBudget] = useState(0);
   const [maxBudget, setMaxBudget] = useState(0);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(
+    null,
+  );
+
+  const resetForm = () => {
+    setEventPurpose("");
+    setMinBudget(0);
+    setMaxBudget(0);
+    setSelectedRecipientId(null);
+  };
 
   ///////////////////////////////////////////////////////////////////////////////////////////
 
-  const { data: recipients = [] } = useQuery<Recipient[]>({
+  const { data: recipients = [], isPending: recipientsPending } = useQuery<
+    Recipient[]
+  >({
     queryKey: ["recipients"],
-    queryFn: async () => {
-      const response = await client.get("gift/recipient/");
-      return response.data;
-    },
+    queryFn: fetchRecipients,
   });
 
   ///////////////////////////////////////////////////////////////////////////////////////////
 
   const { mutate: createEventMutate, isPending: createEventPending } =
-    useMutation({
-      mutationFn: async (newEventData: {
-        purpose: string;
-        min_budget: number;
-        max_budget: number;
-      }) => {
-        if (!selectedRecipientId) throw new Error(t.requiredRecipient);
-        const response = await client.post(
-          `gift/recipient/${selectedRecipientId}/event/`,
-          newEventData,
-        );
-        return response.data;
-      },
-      onSuccess: (data) => {
-        const serverEventId =
-          data.event_id || data.id || (data.event && data.event.id);
-
-        if (!serverEventId) {
-          Alert.alert(t.errorTitle, t.createEventFail);
-          return;
-        }
-
-        setEventPurpose("");
-        setMinBudget(0);
-        setMaxBudget(0);
-        setSelectedRecipientId(null);
-
-        router.push({
-          pathname: "/recommendResult",
-          params: { event_id: serverEventId },
-        });
-      },
-      onError: (error: any) => {
-        console.error("이벤트 등록 실패:", error.response?.data);
-        Alert.alert(t.networkFailTitle, t.networkFailMsg);
-      },
+    useCreateEventMutation({
+      onSuccessCallback: resetForm,
     });
-
-  ///////////////////////////////////////////////////////////////////////////////////////////
 
   const handleCreateEvent = () => {
     if (!selectedRecipientId) {
@@ -111,10 +83,16 @@ export default function RecommendScreen() {
       Alert.alert(t.budgetErrorTitle, t.budgetErrorMsg);
       return;
     }
-    createEventMutate({
+
+    const newEventPayload: CreateEventDto = {
       purpose: eventPurpose,
       min_budget: Number(minBudget),
       max_budget: Number(maxBudget),
+    };
+
+    createEventMutate({
+      recipientId: selectedRecipientId!,
+      newEventPayload,
     });
   };
 
@@ -178,31 +156,44 @@ export default function RecommendScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {recipients.map((r) => (
-                <TouchableOpacity
-                  key={r.id}
-                  style={[
-                    styles.recipientBadge,
-                    selectedRecipientId === r.id &&
-                      styles.recipientBadgeSelected,
-                  ]}
-                  onPress={() => setSelectedRecipientId(r.id)}
+              {recipientsPending ? (
+                <View
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 32,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
-                  <User
-                    size={12}
-                    color={selectedRecipientId === r.id ? "white" : "#FF7096"}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text
+                  <ActivityIndicator size="small" color="#FF7096" />
+                </View>
+              ) : (
+                recipients.map((r) => (
+                  <TouchableOpacity
+                    key={r.id}
                     style={[
-                      styles.recipientBadgeText,
-                      selectedRecipientId === r.id && { color: "white" },
+                      styles.recipientBadge,
+                      selectedRecipientId === r.id &&
+                        styles.recipientBadgeSelected,
                     ]}
+                    onPress={() => setSelectedRecipientId(r.id)}
                   >
-                    {r.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <User
+                      size={12}
+                      color={selectedRecipientId === r.id ? "white" : "#FF7096"}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.recipientBadgeText,
+                        selectedRecipientId === r.id && { color: "white" },
+                      ]}
+                    >
+                      {r.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
 
             <Text style={styles.inputLabel}>{t.occasionLabel}</Text>

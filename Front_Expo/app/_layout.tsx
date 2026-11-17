@@ -18,6 +18,19 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+///////////////////////////////////////////////////////////////////////////////////////////
+
+const MyGiftAppTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: "#fdb0cf",
+    background: "#fff3f6",
+  },
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -26,6 +39,8 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -61,14 +76,7 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
-const MyGiftAppTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: "#fdb0cf",
-    background: "#fff3f6",
-  },
-};
+///////////////////////////////////////////////////////////////////////////////////////////
 
 function RootLayoutNav() {
   return (

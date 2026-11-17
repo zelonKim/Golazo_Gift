@@ -2,6 +2,9 @@
 
 **Golazo Gift** is an AI-powered personalized gift recommendation platform available on both mobile and web. By analyzing recipient details and gifting contexts, it takes the guesswork out of finding the perfect present.
 
+> **⚠️ Notice regarding Amazon Product Links & Images:**  
+> Due to Amazon Associates' prerequisites for issuing Product Advertising API keys (requiring qualified affiliate sales prior to access), the Amazon API is not currently connected. Consequently, images and direct purchase links for AI-recommended gifts are temporarily unavailable or may not work as expected.
+
 ---
 
 ## ✨ Key Features
@@ -42,5 +45,3 @@ Available exclusively on the **Golazo Gift** iOS and Android applications:
 
 - **Database:** PostgreSQL / NeonDB / Django ORM Models
 - **LLM Integration:** OpenAI API (`gpt-4o-mini`)
-
-

@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌐 Golazo Gift - Web Application
 
-## Getting Started
+This contains the web application for **Golazo Gift**. It serves as a frictionless, zero-login web portal for instant AI gift recommendations, landing page overview, privacy policy hosting, and direct mobile app download onboarding.
 
-First, run the development server:
+## 🛠 Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Data Fetching & State:** React Query (`@tanstack/react-query`)
+- **Internationalization:** custom language hooks (`hooks/Languages/`)
+- **Deployment:** Vercel
+
+## 📁 Directory Structure
+
+```
+Front_Nextjs/
+├── api/                        # Backend API integration layer
+│   ├── recs/                   # AI gift recommendation API calls
+│   │   └── fetchQuickRecomm... # Fetches recommendations from FastAPI engine
+│   └── client.ts               # Base HTTP client configuration
+├── app/                        # Next.js 15 App Router pages & layouts
+│   ├── privacy/                # Privacy Policy page (required for App Store / Google Play)
+│   │   └── page.tsx
+│   ├── recommend/              # Instant AI gift recommendation flow
+│   │   ├── result/             # Curated AI recommendation results view
+│   │   │   └── page.tsx
+│   │   └── page.tsx            # Recipient criteria input form
+│   ├── globals.css             # Global styles and Tailwind directives
+│   ├── layout.tsx              # Root layout and metadata configuration
+│   ├── page.tsx                # Landing page & mobile app showcase
+│   └── providers.tsx           # Global context and query providers
+├── hooks/                      # Custom React hooks
+│   ├── Languages/              # English & Spanish localization hooks
+│   └── recs/                   # Recommendation data fetching hooks (`useQuickRecomme...`)
+├── public/                     # Static assets, images, and icons
+├── types/                      # TypeScript interfaces (`Product.ts`, `RecommendRequest.ts`)
+├── utils/                      # Helper utilities
+│   ├── formatPrice.ts          # Currency formatting (USD)
+│   ├── getAgeOptions.ts        # Age group option mappers
+│   ├── getGenderOptions.ts     # Gender option mappers
+│   ├── getPurposeOptions.ts    # Occasion/purpose option mappers
+│   └── handleAppDownload.ts    # Platform-aware App Store / Google Play redirect logic
+├── next.config.ts              # Next.js configuration
+├── postcss.config.mjs          # PostCSS / Tailwind CSS configuration
+└── tsconfig.json               # TypeScript compiler configuration
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Zero-Login AI Gift Recommendation (`/recommend`):** Visitors can immediately input recipient details (occasion, age group, gender, hobbies, budget, and notes) to receive tailored gift suggestions without creating an account.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Curated Results View (`/recommend/result`):** Displays the top 3 AI-recommended products with realistic USD pricing, persuasive reasoning, and direct shopping search links.
 
-## Learn More
+- **Store Compliance Hosting (`/privacy`):** Hosts the official Privacy Policy required for Apple App Store and Google Play Store distribution.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Bilingual Localization (`hooks/Languages`):** Supports seamless switching between English and Spanish.

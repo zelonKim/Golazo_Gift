@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException
-from typing import List, Optional
 import os
 from dotenv import load_dotenv
 from schemas import RecommendRequest, RecommendResponse, RecommendListResponse
@@ -26,7 +25,7 @@ def read_root():
     return {"message": "FastAPI 엔진이 정상 작동 중입니다."}
 
 
-@app.post("/api/v1/recommend", response_model=List[RecommendResponse])
+@app.post("/api/v1/recommend", response_model=list[RecommendResponse])
 async def get_recommendation(request: RecommendRequest):
     try:
         # 1. 미국 감성의 전문 큐레이터 페르소나 설정

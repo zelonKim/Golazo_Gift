@@ -34,7 +34,7 @@ const translations = {
     // 알림창 멘트
     noticeTitle: "Notice",
     enterNicknameAlert: "Please enter your nickname!",
-    successTitle: "Success 🎉",
+    successTitle: "Success ",
     successMsg: "Your nickname has been updated successfully.",
     errorTitle: "Error 😢",
     updateErrorMsg: "Failed to update nickname.",
@@ -82,7 +82,7 @@ const translations = {
     // 알림창 멘트
     noticeTitle: "Aviso",
     enterNicknameAlert: "¡Por favor, escribe tu apodo!",
-    successTitle: "¡Éxito! 🎉",
+    successTitle: "¡Éxito! ",
     successMsg: "Tu apodo ha sido actualizado con éxito.",
     errorTitle: "Error 😢",
     updateErrorMsg: "No se pudo actualizar el apodo.",

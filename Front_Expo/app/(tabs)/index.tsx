@@ -1,85 +1,66 @@
 "use client";
-import { client } from "@/api/client";
-import { TODAY_STR } from "@/constants/TODAY_STR";
+import { fetchDateMemo } from "@/api/memo/fetchDateMemo";
+import { DateMemoModal } from "@/components/DateMemoModal";
 import { useHomeLanguage } from "@/hooks/Languages/useHomeLanguage";
+import { useAddDateMemoMutation } from "@/hooks/memo/useAddDateMemoMutation";
+import { useDeleteDateMemoMutation } from "@/hooks/memo/useDeleteDateMemoMutation";
+import { useSavePushTokenMutation } from "@/hooks/user/useSavePushTokenMutation";
 import { DateMemo } from "@/types/DateMemo";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
-import {
-  CalendarDays,
-  Calendar as CalendarIcon,
-  Plus,
-  X,
-} from "lucide-react-native";
+import { Calendar as CalendarIcon, Plus } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Keyboard,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { Calendar } from "react-native-calendars";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const { t, lang } = useHomeLanguage();
-  const queryClient = useQueryClient();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [memoDate, setMemoDate] = useState("");
 
+  const handleCloseModal = () => {
+    setMemoContent("");
+    setMemoDate("");
+    setIsModalVisible(false);
+  };
+
   /////////////////////////////////////////////////////////////////////////////////////////
 
   const { data: anniversaries = [], isLoading } = useQuery<DateMemo[]>({
     queryKey: ["dateMemos"],
-    queryFn: async () => {
-      const response = await client.get("gift/date-memo/");
-      return response.data;
-    },
+    queryFn: fetchDateMemo,
   });
 
   const mainDDay = anniversaries.length > 0 ? anniversaries[0] : null;
 
   /////////////////////////////////////////////////////////////////////////////////////////
 
-  const addMemoMutation = useMutation({
-    mutationFn: async (newMemo: { content: string; target_date: string }) => {
-      const response = await client.post("gift/date-memo/", newMemo);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dateMemos"] });
-      Alert.alert(t.saveSuccessTitle, t.saveSuccessMsg);
-      setMemoContent("");
-      setMemoDate("");
-      setIsModalVisible(false);
-    },
-    onError: (error: any) => {
-      console.error("기념일 등록 실패:", error.response?.data);
-      Alert.alert(t.saveFailTitle, t.saveFailMsg);
-    },
-  });
+  const { mutate: addMemoMutate, isPending: addMemoPending } =
+    useAddDateMemoMutation({
+      onSuccessCallback: handleCloseModal,
+    });
 
   const handleCreateMemo = () => {
     if (!memoContent || !memoDate) {
       Alert.alert(t.requiredTitle, t.requiredMsg);
       return;
     }
-    addMemoMutation.mutate({
+    addMemoMutate({
       content: memoContent,
       target_date: memoDate,
     });
@@ -87,51 +68,22 @@ export default function HomeScreen() {
 
   /////////////////////////////////////////////////////////////////////////////////////////
 
-  const deleteMemoMutation = useMutation({
-    mutationFn: async (memoId: number) => {
-      const response = await client.delete(`gift/date-memo/${memoId}/`);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dateMemos"] });
-    },
-    onError: (error: any) => {
-      console.error("❌ 백엔드 에러 상태 코드:", error.response?.status);
-      console.error("❌ 백엔드 에러 상세 내용:", error.response?.data);
-      Alert.alert(t.saveFailTitle, t.deleteFailMsg);
-    },
-  });
+  const { mutate: deleteMemoMutate } = useDeleteDateMemoMutation();
 
-  const handleLongPress = (memoId: number, content: string) => {
+  const handleDeleteMemo = (memoId: number, content: string) => {
     Alert.alert(t.deleteTitle, t.deleteConfirm.replace("{content}", content), [
       { text: t.deleteCancel, style: "cancel" },
       {
         text: t.deleteBtn,
         style: "destructive",
-        onPress: () => deleteMemoMutation.mutate(memoId),
+        onPress: () => deleteMemoMutate(memoId),
       },
     ]);
   };
 
   /////////////////////////////////////////////////////////////////////////////////////////
 
-  const savePushTokenMutation = useMutation({
-    mutationFn: async (token: string) => {
-      console.log("💡 FCM 디바이스 푸시 토큰:", token);
-      return await client.post("user/push-token/", { token });
-    },
-    onSuccess: () => {
-      console.log("🎯 FCM 디바이스 푸시 토큰이 장고 서버에 동기화되었습니다.");
-    },
-    onError: (err: any) => {
-      console.log(
-        "푸시 토큰 서버 전송 실패:",
-        err.response?.data || err.message,
-      );
-    },
-  });
-
-  /////////////////////////////////////////////////////////////////////////////////////////
+  const { mutate: savePushTokenMutate } = useSavePushTokenMutation();
 
   useEffect(() => {
     async function setupNotifications() {
@@ -159,7 +111,7 @@ export default function HomeScreen() {
             projectId: Constants?.expoConfig?.extra?.eas?.projectId,
           });
           const pushToken = tokenData.data;
-          savePushTokenMutation.mutate(pushToken);
+          savePushTokenMutate(pushToken);
         } catch (error) {
           console.error("❌ 토큰 발급 에러:", error);
         }
@@ -178,12 +130,10 @@ export default function HomeScreen() {
       style={[styles.container, { backgroundColor: "#FFFBFB" }]}
       edges={["top"]}
     >
-      {/* 1. 상단 헤더 */}
       <View style={styles.header}>
         <Text style={styles.logoText}>{t.headerTitle}</Text>
       </View>
 
-      {/* 로딩 인디케이터 처리 */}
       {isLoading ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
@@ -198,7 +148,6 @@ export default function HomeScreen() {
         >
           {mainDDay ? (
             <>
-              {/* 데이터가 있을 때: 상단 카드 + 다가오는 목록 노출 */}
               <View style={styles.cloudCard}>
                 <View style={styles.bubbleTag}>
                   <Text style={styles.bubbleTagText}>{t.upNext}</Text>
@@ -244,12 +193,11 @@ export default function HomeScreen() {
                 </View>
 
                 {anniversaries.map((item) => (
-                  /* ⭐️ 온터치에 onLongPress 바인딩 완료! */
                   <TouchableOpacity
                     key={item.id}
                     style={styles.cuteListItem}
                     activeOpacity={0.7}
-                    onLongPress={() => handleLongPress(item.id, item.content)}
+                    onLongPress={() => handleDeleteMemo(item.id, item.content)}
                   >
                     <View style={styles.listItemLeft}>
                       <View style={styles.heartIconBg}>
@@ -273,7 +221,6 @@ export default function HomeScreen() {
               </View>
             </>
           ) : (
-            /* 데이터가 없을 때: 전용 가로폭 카드 배치 */
             <View
               style={[styles.cloudCard, { width: "100%", marginBottom: 0 }]}
             >
@@ -303,159 +250,20 @@ export default function HomeScreen() {
         </ScrollView>
       )}
 
-      {/* 4. 기념일 등록 메인 모달 팝업 */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <DateMemoModal
         visible={isModalVisible}
-        onRequestClose={() => {
-          setMemoContent("");
-          setMemoDate("");
-          setIsModalVisible(false);
-        }}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.select({
-            ios: -120,
-            android: -100,
-          })}
-        >
-          <TouchableWithoutFeedback
-            onPress={Keyboard.dismiss}
-            accessible={false}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>{t.addEventTitle}</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsModalVisible(false);
-                      setMemoContent("");
-                      setMemoDate("");
-                    }}
-                  >
-                    <X size={20} color="#AEAEB2" />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.inputLabel}>{t.whatOccasion}</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={t.placeholderOccasion}
-                    placeholderTextColor="#AEAEB2"
-                    value={memoContent}
-                    onChangeText={setMemoContent}
-                  />
-                </View>
-
-                <Text style={styles.inputLabel}>{t.whenIsIt}</Text>
-                <TouchableOpacity
-                  style={styles.inputWrapper}
-                  onPress={() => setIsCalendarVisible(true)}
-                >
-                  <Text
-                    style={[
-                      styles.dateTextValue,
-                      !memoDate && { color: "#AEAEB2" },
-                    ]}
-                  >
-                    {memoDate || (
-                      <View
-                        style={{ flexDirection: "row", alignItems: "center" }}
-                      >
-                        <CalendarDays size={18} color={"#AEAEB2"} />
-                        <Text
-                          style={{
-                            color: "#AEAEB2",
-                            fontSize: 13,
-                            fontWeight: "600",
-                          }}
-                        >
-                          {"  "}
-                          {t.selectDate}
-                        </Text>
-                      </View>
-                    )}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modalSubmitButton,
-                    addMemoMutation.isPending && styles.disabledButton,
-                  ]}
-                  onPress={handleCreateMemo}
-                  disabled={addMemoMutation.isPending}
-                >
-                  {addMemoMutation.isPending ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.modalSubmitButtonText}>
-                      {t.saveEvent}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-
-        {/* 📅 5. 중첩 달력 모달 */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={isCalendarVisible}
-          onRequestClose={() => setIsCalendarVisible(false)}
-        >
-          <View style={styles.calendarModalOverlay}>
-            <View style={styles.calendarContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderTitle}>{t.selectDateTitle}</Text>
-                <TouchableOpacity onPress={() => setIsCalendarVisible(false)}>
-                  <X size={20} color="#AEAEB2" />
-                </TouchableOpacity>
-              </View>
-
-              <Calendar
-                current={memoDate || undefined}
-                minDate={TODAY_STR}
-                onDayPress={(day) => {
-                  setMemoDate(day.dateString);
-                  setIsCalendarVisible(false);
-                }}
-                markedDates={{
-                  [memoDate]: {
-                    selected: true,
-                    disableTouchEvent: true,
-                    selectedColor: "#FF7096",
-                  },
-                }}
-                theme={{
-                  backgroundColor: "#ffffff",
-                  calendarBackground: "#ffffff",
-                  textSectionTitleColor: "#757580",
-                  selectedDayBackgroundColor: "#FF7096",
-                  selectedDayTextColor: "#ffffff",
-                  todayTextColor: "#FF7096",
-                  dayTextColor: "#2D2D3A",
-                  arrowColor: "#FF7096",
-                  monthTextColor: "#2D2D3A",
-                  textDayFontWeight: "600",
-                  textMonthFontWeight: "800",
-                  textDayHeaderFontWeight: "700",
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                  textDisabledColor: "#E5E5EA",
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
-      </Modal>
+        onClose={handleCloseModal}
+        memoContent={memoContent}
+        setMemoContent={setMemoContent}
+        memoDate={memoDate}
+        setMemoDate={setMemoDate}
+        isCalendarVisible={isCalendarVisible}
+        setIsCalendarVisible={setIsCalendarVisible}
+        onSubmit={handleCreateMemo}
+        isPending={addMemoPending}
+        t={t}
+        styles={styles}
+      />
     </SafeAreaView>
   );
 }
@@ -566,7 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    padding: 16, // 원래대로 균형 잡힌 패딩으로 복구
+    padding: 16,
     borderRadius: 24,
     marginBottom: 12,
     borderWidth: 1.5,

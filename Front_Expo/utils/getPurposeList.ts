@@ -14,6 +14,14 @@ export const getPurposeList = (lang: LangType) => [
     label: lang === "es" ? "💐 Cumple \n de padres" : "💐 Parents' BDay",
   },
   {
+    code: "KIDS_BDAY",
+    label: lang === "es" ? "👶 Cumple \n de hijos" : "👶 Kids' BDay",
+  },
+  {
+    code: "SIBLINGS_BDAY",
+    label: lang === "es" ? "👦 Cumple \n de hermanos" : "👦 Siblings' BDay",
+  },
+  {
     code: "COUPLE_ANNIV",
     label: lang === "es" ? "👩‍❤️‍👨 Aniversario \n de novios" : "👩‍❤️‍👨 Couple Anniv",
   },

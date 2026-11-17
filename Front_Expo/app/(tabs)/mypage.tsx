@@ -1,8 +1,11 @@
 "use client";
-import { client } from "@/api/client";
+import { fetchUserProfile } from "@/api/user/fetchUserProfile";
+import { EditNicknameModal } from "@/components/EditNicknameModal";
 import { useMyPageLanguage } from "@/hooks/Languages/useMyPageLanguage";
+import { useDeleteAccountMutation } from "@/hooks/user/useDeleteAccountMutation";
+import { useUpdateNicknameMutation } from "@/hooks/user/useUpdateNicknameMutation";
 import { UserProfile } from "@/types/UserProfile";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -14,90 +17,79 @@ import {
   Settings,
   User,
   UserX,
-  X,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function MyPageScreen() {
-  const { lang, t } = useMyPageLanguage();
-
+  const { t } = useMyPageLanguage();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const [isAlarmEnabled, setIsAlarmEnabled] = useState(true);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [inputNickname, setInputNickname] = useState("");
 
-  // 🔍 1. useQuery: 내 프로필 정보 실시간 조회 (GET /user/me/)
-  const { data: profile, isLoading } = useQuery<UserProfile>({
-    queryKey: ["userProfile"],
-    queryFn: async () => {
-      const response = await client.get("user/me/");
-      return response.data;
-    },
-  });
-
-  // 🚀 2. useMutation: 닉네임 수정 (PATCH /user/me/)
-  const updateNicknameMutation = useMutation({
-    mutationFn: async (nickname: string) => {
-      const response = await client.patch("user/me/", { nickname });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      Alert.alert(t.successTitle, t.successMsg);
-      setIsEditModalVisible(false);
-    },
-    onError: () => {
-      Alert.alert(t.errorTitle, t.updateErrorMsg);
-    },
-  });
-
-  // 🚀 3. useMutation: 회원 탈퇴 (DELETE /user/me/)
-  const deleteAccountMutation = useMutation({
-    mutationFn: async () => {
-      return (await client.delete("user/me/")).data;
-    },
-    onSuccess: async () => {
-      await SecureStore.deleteItemAsync("userToken");
-      Alert.alert(t.deleteSuccessTitle, t.deleteSuccessMsg);
-      router.replace("/login");
-    },
-    onError: () => {
-      Alert.alert(t.errorTitle, t.deleteErrorMsg);
-    },
-  });
-
-  // 🛠️ 닉네임 변경 폼 열기 핸들러
   const openEditModal = () => {
-    setInputNickname(profile?.nickname || "");
     setIsEditModalVisible(true);
+    setInputNickname(profile?.nickname || "");
   };
+
+  //////////////////////////////////////////////////////////////////////////////////
+
+  const { data: profile, isPending: profilePending } = useQuery<UserProfile>({
+    queryKey: ["userProfile"],
+    queryFn: fetchUserProfile,
+  });
+
+  const displayNickname = profile?.nickname || t.defaultNickname;
+  const totalRecipients = profile?.recipients?.length || 0;
+  const totalEvents =
+    profile?.recipients?.reduce((sum, r) => sum + (r.events?.length || 0), 0) ||
+    0;
+
+  //////////////////////////////////////////////////////////////////////////////////
+
+  const { mutate: updateNicknameMutate, isPending: updateNicknamePending } =
+    useUpdateNicknameMutation({
+      onSuccessCallback: () => {
+        setIsEditModalVisible(false);
+      },
+    });
 
   const handleSaveNickname = () => {
     if (!inputNickname.trim()) {
       Alert.alert(t.noticeTitle, t.enterNicknameAlert);
       return;
     }
-    updateNicknameMutation.mutate(inputNickname.trim());
+    updateNicknameMutate(inputNickname.trim());
   };
+
+  //////////////////////////////////////////////////////////////////////////////////
+
+  const { mutate: deleteAccountMutate } = useDeleteAccountMutation();
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t.deleteTitle, t.deleteConfirmMsg, [
+      { text: t.cancelBtn, style: "cancel" },
+      {
+        text: t.deleteBtn,
+        style: "destructive",
+        onPress: () => deleteAccountMutate(),
+      },
+    ]);
+  };
+
+  //////////////////////////////////////////////////////////////////////////////////
 
   const handleLogOut = () => {
     Alert.alert(t.logoutTitle, t.logoutConfirmMsg, [
@@ -113,25 +105,9 @@ export default function MyPageScreen() {
     ]);
   };
 
-  // ⚠️ 회원 탈퇴 컨펌 얼럿 핸들러
-  const handleDeleteAccountCheck = () => {
-    Alert.alert(t.deleteTitle, t.deleteConfirmMsg, [
-      { text: t.cancelBtn, style: "cancel" },
-      {
-        text: t.deleteBtn,
-        style: "destructive",
-        onPress: () => deleteAccountMutation.mutate(),
-      },
-    ]);
-  };
+  //////////////////////////////////////////////////////////////////////////////////
 
-  // 📊 역참조 데이터 개수 동적 연산
-  const totalRecipients = profile?.recipients?.length || 0;
-  const totalEvents =
-    profile?.recipients?.reduce((sum, r) => sum + (r.events?.length || 0), 0) ||
-    0;
-
-  if (isLoading) {
+  if (profilePending) {
     return (
       <View style={styles.centerFlex}>
         <ActivityIndicator size="large" color="#FF7096" />
@@ -139,8 +115,7 @@ export default function MyPageScreen() {
     );
   }
 
-  // 표시 명칭 분기 가이드라인 반영
-  const displayNickname = profile?.nickname || t.defaultNickname;
+  //////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView
@@ -155,17 +130,14 @@ export default function MyPageScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 👤 2. 가로 분할형 프로필 대시보드 카드 */}
         <View style={styles.cloudCard}>
           <View style={styles.profileMainRow}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatarEmoji}>
-                <Image
-                  source={require("../../assets/images/miniGifty.png")} // 상대 경로 유지
-                  style={{ width: 69, height: 69 }}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image
+                source={require("../../assets/images/miniGifty.png")}
+                style={{ width: 69, height: 69 }}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.profileTextSide}>
               <View style={styles.badgeRow}>
@@ -192,7 +164,6 @@ export default function MyPageScreen() {
 
           <View style={styles.cardDivider} />
 
-          {/* 실시간 연동 미니 활동 통계 스탯 영역 */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Heart
@@ -218,14 +189,12 @@ export default function MyPageScreen() {
           </View>
         </View>
 
-        {/* ⚙️ 3. 서비스 설정 리스트 */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Settings size={22} color={"#FF7096"} />
             <Text style={styles.sectionTitle}>{t.sectionSettings}</Text>
           </View>
 
-          {/* 닉네임 변경 터치 시 모달 온 */}
           <TouchableOpacity style={styles.cuteListItem} onPress={openEditModal}>
             <View style={styles.listItemLeft}>
               <View style={styles.heartIconBg}>
@@ -242,7 +211,6 @@ export default function MyPageScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* 로그아웃 버튼 */}
           <TouchableOpacity style={styles.cuteListItem} onPress={handleLogOut}>
             <View style={styles.listItemLeft}>
               <View style={styles.heartIconBg}>
@@ -259,7 +227,6 @@ export default function MyPageScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* 개인 정보 처리 방침*/}
           <TouchableOpacity
             onPress={() =>
               Linking.openURL("https://www.golazogift.com/privacy")
@@ -282,10 +249,9 @@ export default function MyPageScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* 🆕 회원 탈퇴 버튼 (최하단 배치) */}
           <TouchableOpacity
             style={[styles.cuteListItem, { borderColor: "#FFF0F3" }]}
-            onPress={handleDeleteAccountCheck}
+            onPress={handleDeleteAccount}
           >
             <View style={styles.listItemLeft}>
               <View
@@ -309,63 +275,21 @@ export default function MyPageScreen() {
         </View>
       </ScrollView>
 
-      {/* 🎀 닉네임 수정용 큐트 팝업 모달 */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <EditNicknameModal
         visible={isEditModalVisible}
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "padding"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? -210 : -190}
-        >
-          <TouchableWithoutFeedback
-            onPress={Keyboard.dismiss}
-            accessible={false}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>
-                    {t.menuNicknameTitle}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setIsEditModalVisible(false)}
-                  >
-                    <X size={20} color="#AEAEB2" />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.inputLabel}>{t.newNicknameLabel}</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder={t.placeholderNickname}
-                    placeholderTextColor="#AEAEB2"
-                    value={inputNickname}
-                    onChangeText={setInputNickname}
-                    maxLength={15}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.modalSubmitButton}
-                  onPress={handleSaveNickname}
-                >
-                  <Text style={styles.modalSubmitButtonText}>
-                    {t.saveChangesBtn}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
+        onClose={() => setIsEditModalVisible(false)}
+        inputNickname={inputNickname}
+        setInputNickname={setInputNickname}
+        onSubmit={handleSaveNickname}
+        isPending={updateNicknamePending}
+        t={t}
+        styles={styles}
+      />
     </SafeAreaView>
   );
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -424,7 +348,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#FFE3EB",
   },
-  avatarEmoji: { fontSize: Platform.OS === "ios" ? 32 : 25 },
+
   mainCardTitle: {
     marginTop: Platform.OS === "ios" ? 4 : 0,
     fontSize: 22,
@@ -495,7 +419,6 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
 
-  /* 팝업 모달 감성 스타일 */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(45, 45, 58, 0.4)",

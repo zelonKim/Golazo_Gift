@@ -1,68 +1,52 @@
 "use client";
-import { client } from "@/api/client";
+import { fetchRecipients } from "@/api/recipient/fetchRecipients";
+import { RecipientFormModal } from "@/components/RecipientFormModal";
+import { AGE_GROUPS } from "@/constants/AGE_GROUPS";
 import { useRecipientLanguage } from "@/hooks/Languages/useRecipientLanguage";
+import { useAddRecipientMutation } from "@/hooks/recipient/useAddRecipientMutation";
+import { useDeleteRecipientMutation } from "@/hooks/recipient/useDeleteRecipientMutation";
+import { useUpdateRecipientMutation } from "@/hooks/recipient/useUpdateRecipientMutation";
 import { GenderChoices } from "@/types/GenderChoices";
 import { Recipient } from "@/types/Recipient";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Plus, Trash2, User, X } from "lucide-react-native";
+import { getGenderEmoji } from "@/utils/getGenderEmoji";
+import { getGenderLabel } from "@/utils/getGenderLabel";
+import { useQuery } from "@tanstack/react-query";
+import { Edit2, Plus, Trash2, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Keyboard,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RecipientScreen() {
-  const { lang, t } = useRecipientLanguage();
-  const queryClient = useQueryClient();
+  const { t } = useRecipientLanguage();
 
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(
     null,
   );
-
   const [name, setName] = useState("");
   const [gender, setGender] = useState<GenderChoices>("P");
   const [ageGroup, setAgeGroup] = useState("");
   const [hobbies, setHobbies] = useState("");
   const [notes, setNotes] = useState("");
-
-  // 🧠 MBTI 개별 성향 상태 관리 (선택형 UI를 위함)
   const [mbtiEI, setMbtiEI] = useState<"E" | "I" | null>(null);
   const [mbtiSN, setMbtiSN] = useState<"S" | "N" | null>(null);
   const [mbtiTF, setMbtiTF] = useState<"T" | "F" | null>(null);
   const [mbtiJP, setMbtiJP] = useState<"J" | "P" | null>(null);
 
-  const ageGroups = [
-    t.ageUnder10,
-    "10s",
-    "20s",
-    "30s",
-    "40s",
-    "50s",
-    "60s",
-    "70s",
-    t.ageOver80,
-  ];
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
-  // 수정 모드 진입 시 기존 MBTI 문자열을 파싱하여 상태에 반영
   useEffect(() => {
     if (editingRecipient && editingRecipient.mbti) {
-      // 혹시 모를 공백 제거 및 대문자 변환
       const savedMbti = editingRecipient.mbti.trim().toUpperCase();
-
-      // 🆕 각 알파벳이 정확히 포함되어 있는지 검사 (단어 오인식 방지)
       setMbtiEI(
         savedMbti.includes("E") ? "E" : savedMbti.includes("I") ? "I" : null,
       );
@@ -76,9 +60,6 @@ export default function RecipientScreen() {
         savedMbti.includes("J") ? "J" : savedMbti.includes("P") ? "P" : null,
       );
 
-      // 🔥 [추가 피드백 방어 코드]
-      // 만약 백엔드에서 데이터가 없을 때 널이 아니라 문자열 "NONE"을 주는 경우가 있다면
-      // 아래와 같이 예외 처리를 해주면 완벽합니다.
       if (savedMbti === "NONE" || savedMbti === "NULL") {
         setMbtiEI(null);
         setMbtiSN(null);
@@ -86,7 +67,6 @@ export default function RecipientScreen() {
         setMbtiJP(null);
       }
     } else {
-      // 데이터가 없으면 모두 초기화
       setMbtiEI(null);
       setMbtiSN(null);
       setMbtiTF(null);
@@ -94,61 +74,8 @@ export default function RecipientScreen() {
     }
   }, [editingRecipient]);
 
-  // 🔍 1. useQuery: 내 지인 목록 가져오기
-  const { data: recipients = [], isLoading } = useQuery<Recipient[]>({
-    queryKey: ["recipients"],
-    queryFn: async () => {
-      const response = await client.get("gift/recipient/");
-      return response.data;
-    },
-  });
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
-  // 🚀 2. useMutation: 지인 등록 (POST)
-  const addRecipientMutation = useMutation({
-    mutationFn: async (newData: Omit<Recipient, "id">) => {
-      return (await client.post("gift/recipient/", newData)).data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert(t.successTitle, t.addSuccessMsg);
-      closeFormModal();
-    },
-    onError: (error: any) => {
-      console.log("서버 에러:", error.response?.data);
-      Alert.alert(t.failTitle, t.failMsg);
-    },
-  });
-
-  // 🚀 3. useMutation: 지인 수정 (PATCH)
-  const updateRecipientMutation = useMutation({
-    mutationFn: async ({
-      id,
-      updatedData,
-    }: {
-      id: number;
-      updatedData: Partial<Recipient>;
-    }) => {
-      return (await client.patch(`gift/recipient/${id}/`, updatedData)).data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert(t.saveSuccessTitle, t.saveSuccessMsg);
-      closeFormModal();
-    },
-  });
-
-  // 🚀 4. useMutation: 지인 삭제 (DELETE)
-  const deleteRecipientMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return (await client.delete(`gift/recipient/${id}/`)).data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipients"] });
-      Alert.alert(t.deleteSuccessTitle, t.deleteSuccessMsg);
-    },
-  });
-
-  // 🛠️ 수정 모드 폼 열기 핸들러
   const openEditModal = (recipient: Recipient) => {
     setEditingRecipient(recipient);
     setName(recipient.name);
@@ -162,19 +89,20 @@ export default function RecipientScreen() {
     } else if (recipient.age_group) {
       uiAgeGroup = `${recipient.age_group}s`;
     }
-    setAgeGroup(uiAgeGroup); // 👈 복원된 UI용 값을 상태에 세팅!
+    setAgeGroup(uiAgeGroup);
 
     setHobbies(recipient.hobbies || "");
     setNotes(recipient.notes || "");
     setIsFormModalVisible(true);
   };
 
-  // ❌ 모달 닫기 및 초기화
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
   const closeFormModal = () => {
     setIsFormModalVisible(false);
     setEditingRecipient(null);
     setName("");
-    setGender("P"); // 기본값으로 복원
+    setGender("P");
     setAgeGroup("");
     setHobbies("");
     setNotes("");
@@ -184,8 +112,30 @@ export default function RecipientScreen() {
     setMbtiJP(null);
   };
 
-  // 💾 최종 저장 버튼 핸들러
-  const handleSave = () => {
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
+  const { data: recipients = [], isPending: recipeintPending } = useQuery<
+    Recipient[]
+  >({
+    queryKey: ["recipients"],
+    queryFn: fetchRecipients,
+  });
+
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
+  const { mutate: addRecipientMutate, isPending: addRecipientPending } =
+    useAddRecipientMutation({
+      onSuccessCallback: closeFormModal,
+    });
+
+  const { mutate: updateRecipientMutate, isPending: updateRecipientPending } =
+    useUpdateRecipientMutation({
+      onSuccessCallback: closeFormModal,
+    });
+
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
+  const handleSaveRecipient = () => {
     if (!name.trim()) {
       Alert.alert(t.requiredTitle, t.requiredNameMsg);
       return;
@@ -201,24 +151,21 @@ export default function RecipientScreen() {
       return;
     }
 
-    // 🆕 선택된 것만 글자를 합치고, 선택 안 된 null은 빈 문자열("")로 대체
     const mbtiStr = `${mbtiEI || ""}${mbtiSN || ""}${mbtiTF || ""}${mbtiJP || ""}`;
 
-    // 최종 글자수가 0보다 크면 그 문자열을 쓰고, 아무것도 선택 안 했으면 null 처리
     const combinedMbti = mbtiStr.length > 0 ? mbtiStr : null;
 
-    let convertedAgeGroup; // 기본값 지정
+    let convertedAgeGroup;
 
     if (ageGroup === t.ageUnder10 || ageGroup === "Under 10")
       convertedAgeGroup = "0";
     else if (ageGroup === t.ageOver80 || ageGroup === "80s+")
       convertedAgeGroup = "80";
     else {
-      // "20s" 에서 "s"를 제거하고 숫자 "20"만 추출
       convertedAgeGroup = ageGroup.replace("s", "");
     }
 
-    const payload = {
+    const recipientPayload: Omit<Recipient, "id"> = {
       name: name.trim(),
       gender,
       age_group: convertedAgeGroup,
@@ -228,17 +175,20 @@ export default function RecipientScreen() {
     };
 
     if (editingRecipient) {
-      updateRecipientMutation.mutate({
+      updateRecipientMutate({
         id: editingRecipient.id,
-        updatedData: payload,
+        updatedData: recipientPayload,
       });
     } else {
-      addRecipientMutation.mutate(payload);
+      addRecipientMutate(recipientPayload);
     }
   };
 
-  // 🗑️ 삭제 컨펌 얼럿 핸들러
-  const handleDeleteCheck = (id: number, targetName: string) => {
+  ///////////////////////////////////////////////////////////////////////////////////////////
+
+  const { mutate: deleteRecipientMutate } = useDeleteRecipientMutation();
+
+  const handleDeleteRecipient = (id: number, targetName: string) => {
     Alert.alert(
       t.deleteTitle,
       t.deleteConfirm.replace("{content}", targetName),
@@ -247,34 +197,19 @@ export default function RecipientScreen() {
         {
           text: t.deleteBtn,
           style: "destructive",
-          onPress: () => deleteRecipientMutation.mutate(id),
+          onPress: () => deleteRecipientMutate(id),
         },
       ],
     );
   };
 
-  // 🧬 백엔드 4가지 성별 스펙에 따른 에모지 렌더링 매핑
-  const getGenderEmoji = (g: string) => {
-    if (g === "M") return "👨";
-    if (g === "F") return "👩";
-    if (g === "N") return "🌈"; // Non-binary용 중성적이고 화사한 에모지
-    return "🧸"; // Prefer not to say 기본 곰인형
-  };
-
-  // 🧬 리스트 화면에 노출될 성별 텍스트 매핑
-  const getGenderLabel = (g: string) => {
-    if (g === "M") return t.genderMaleShort;
-    if (g === "F") return t.genderFemaleShort;
-    if (g === "N") return t.genderNonbinaryShort;
-    return t.genderPrivateShort;
-  };
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: "#FFFBFB" }]}
       edges={["top"]}
     >
-      {/* 1. 상단 헤더 */}
       <View style={styles.header}>
         <Text style={styles.logoText}>{t.headerTitle}</Text>
         <TouchableOpacity
@@ -285,8 +220,7 @@ export default function RecipientScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 로딩 처리 */}
-      {isLoading ? (
+      {recipeintPending ? (
         <View style={styles.centerFlex}>
           <ActivityIndicator size="large" color="#FF7096" />
           <Text style={styles.loadingText}>{t.loadingText}</Text>
@@ -298,7 +232,7 @@ export default function RecipientScreen() {
         >
           {recipients.length > 0 ? (
             recipients.map((item) => {
-              let displayAge = "20s"; // 혹은 모를 예외 대비 기본값
+              let displayAge = "20s";
               if (item.age_group === "0") {
                 displayAge = t.ageUnder10;
               } else if (item.age_group === "80") {
@@ -318,11 +252,11 @@ export default function RecipientScreen() {
                     <View style={styles.mainInfoSide}>
                       <Text style={styles.recipientName}>{item.name}</Text>
                       <Text style={styles.recipientMeta}>
-                        {displayAge} · {getGenderLabel(item.gender)}
+                        {displayAge} · {getGenderLabel(item.gender, t)}
                         {item.mbti ? ` · ${item.mbti}` : ""}
                       </Text>
                     </View>
-                    {/* 🛠️ 잘렸던 버튼 영역 복구 완료 */}
+
                     <View style={styles.actionButtonGroup}>
                       <TouchableOpacity
                         style={styles.iconMiniButton}
@@ -332,14 +266,15 @@ export default function RecipientScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.iconMiniButton, { marginLeft: 8 }]}
-                        onPress={() => handleDeleteCheck(item.id, item.name)}
+                        onPress={() =>
+                          handleDeleteRecipient(item.id, item.name)
+                        }
                       >
                         <Trash2 size={15} color="#FF7096" />
                       </TouchableOpacity>
                     </View>
                   </View>
 
-                  {/* 취미 및 특사항 조건부 노출 */}
                   {(item.hobbies || item.notes) && (
                     <>
                       <View style={styles.cardDivider} />
@@ -385,197 +320,31 @@ export default function RecipientScreen() {
         </ScrollView>
       )}
 
-      {/* 지인 등록 및 수정 통합 모달 */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <RecipientFormModal
         visible={isFormModalVisible}
-        onRequestClose={closeFormModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? -30 : -40}
-        >
-          <TouchableWithoutFeedback
-            onPress={Keyboard.dismiss}
-            accessible={false}
-          >
-            <View style={styles.modalOverlay}>
-              <ScrollView
-                contentContainerStyle={styles.modalScrollContainer}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalHeaderTitle}>
-                      {editingRecipient ? t.editTitle : t.addTitle}
-                    </Text>
-                    <TouchableOpacity onPress={closeFormModal}>
-                      <X size={20} color="#AEAEB2" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* 필드 1: 이름 */}
-                  <Text style={styles.inputLabel}>{t.nameLabel}</Text>
-                  <View style={styles.inputWrapper}>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder={t.namePlaceholder}
-                      placeholderTextColor="#AEAEB2"
-                      value={name}
-                      onChangeText={setName}
-                    />
-                  </View>
-
-                  {/* 필드 2: 성별 */}
-                  <Text style={styles.inputLabel}>{t.genderLabel}</Text>
-                  <View style={[styles.gridContainer, { marginBottom: 16 }]}>
-                    <TouchableOpacity
-                      style={[
-                        styles.gridBadge,
-                        { width: "48%" },
-                        gender === "M" && styles.choiceBadgeSelected,
-                      ]}
-                      onPress={() => setGender("M")}
-                    >
-                      <Text
-                        style={[
-                          styles.gridBadgeText,
-                          gender === "M" && { color: "white" },
-                        ]}
-                      >
-                        {t.genderM}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.gridBadge,
-                        { width: "48%" },
-                        gender === "F" && styles.choiceBadgeSelected,
-                      ]}
-                      onPress={() => setGender("F")}
-                    >
-                      <Text
-                        style={[
-                          styles.gridBadgeText,
-                          gender === "F" && { color: "white" },
-                        ]}
-                      >
-                        {t.genderF}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.gridBadge,
-                        { width: "48%", marginTop: 6 },
-                        gender === "N" && styles.choiceBadgeSelected,
-                      ]}
-                      onPress={() => setGender("N")}
-                    >
-                      <Text
-                        style={[
-                          styles.gridBadgeText,
-                          gender === "N" && { color: "white" },
-                        ]}
-                      >
-                        {t.genderN}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.gridBadge,
-                        { width: "48%", marginTop: 6 },
-                        gender === "P" && styles.choiceBadgeSelected,
-                      ]}
-                      onPress={() => setGender("P")}
-                    >
-                      <Text
-                        style={[
-                          styles.gridBadgeText,
-                          gender === "P" && { color: "white" },
-                        ]}
-                      >
-                        {t.genderP}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* 필드 3: 나이대 */}
-                  <Text style={styles.inputLabel}>{t.ageLabel}</Text>
-                  <View style={styles.gridContainer}>
-                    {ageGroups.map((age) => (
-                      <TouchableOpacity
-                        key={age}
-                        style={[
-                          styles.gridBadge,
-                          ageGroup === age && styles.choiceBadgeSelected,
-                        ]}
-                        onPress={() => setAgeGroup(age)}
-                      >
-                        <Text
-                          style={[
-                            styles.gridBadgeText,
-                            ageGroup === age && { color: "white" },
-                          ]}
-                        >
-                          {age}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* 필드 5: 취미 */}
-                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                    {t.hobbiesInputLabel}
-                  </Text>
-                  <View style={styles.inputWrapper}>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder={t.hobbiesPlaceholder}
-                      placeholderTextColor="#AEAEB2"
-                      value={hobbies}
-                      onChangeText={setHobbies}
-                    />
-                  </View>
-
-                  {/* 필드 6: 특이사항 */}
-                  <Text style={styles.inputLabel}>{t.notesInputLabel}</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      { height: 80, alignItems: "flex-start", paddingTop: 12 },
-                    ]}
-                  >
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder={t.notesPlaceholder}
-                      placeholderTextColor="#AEAEB2"
-                      multiline
-                      numberOfLines={3}
-                      value={notes}
-                      onChangeText={setNotes}
-                    />
-                  </View>
-
-                  {/* 최종 제출 버튼 */}
-                  <TouchableOpacity
-                    style={styles.modalSubmitButton}
-                    onPress={handleSave}
-                  >
-                    <Text style={styles.modalSubmitButtonText}>
-                      {editingRecipient ? t.saveBtn : t.addBtn}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
+        onClose={closeFormModal}
+        editingRecipient={editingRecipient}
+        name={name}
+        setName={setName}
+        gender={gender}
+        setGender={setGender}
+        ageGroup={ageGroup}
+        setAgeGroup={setAgeGroup}
+        hobbies={hobbies}
+        setHobbies={setHobbies}
+        notes={notes}
+        setNotes={setNotes}
+        onSubmit={handleSaveRecipient}
+        isPending={updateRecipientPending || addRecipientPending}
+        t={t}
+        ageGroupsList={AGE_GROUPS(t)}
+        styles={styles}
+      />
     </SafeAreaView>
   );
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

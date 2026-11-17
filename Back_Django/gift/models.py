@@ -74,6 +74,8 @@ class Event(models.Model):
         ("FRIEND_BDAY", "Friend's BDay"),
         ("LOVER_BDAY", "Partner's BDay"),
         ("PARENTS_BDAY", "Parents' BDay"),
+        ("KIDS_BDAY", "Kids' BDay"),
+        ("SIBLINGS_BDAY", "Siblings' BDay"),
         ("COUPLE_ANNIV", "Couple Anniv"),
         ("WED_ANNIV", "Wedding Anniv"),
         ("HOUSEWARMING", "Housewarming"),
@@ -139,9 +141,7 @@ class RecommendedProduct(models.Model):
 
     product_name = models.CharField(max_length=255, verbose_name="상품명")
 
-    product_price = models.PositiveIntegerField(
-        default=0, verbose_name="상품 가격"
-    )
+    product_price = models.PositiveIntegerField(default=0, verbose_name="상품 가격")
 
     # 💡 1. 이미지 URL 저장 필드 추가 (Amazon CDN 길이를 고려해 max_length 설정)
     image_url = models.URLField(
@@ -188,6 +188,7 @@ class RecommendedProduct(models.Model):
 
     def __str__(self):
         return f"[{self.event.recipient.name}] {self.product_name} ({self.get_status_display()})"
+
 
 ##########################
 

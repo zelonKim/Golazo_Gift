@@ -4,7 +4,6 @@ import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { LocaleConfig } from "react-native-calendars";
 
-
 LocaleConfig.locales["en"] = {
   monthNames: [
     "January",
@@ -46,7 +45,6 @@ LocaleConfig.locales["en"] = {
   dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   today: "Today",
 };
-
 
 LocaleConfig.locales["es"] = {
   monthNames: [
@@ -92,7 +90,6 @@ LocaleConfig.locales["es"] = {
 
 LocaleConfig.defaultLocale = "en";
 
-
 const translations = {
   en: {
     headerTitle: "Special Days",
@@ -124,6 +121,9 @@ const translations = {
     deleteCancel: "Cancel",
     deleteBtn: "Delete",
     deleteFailMsg: "Something went wrong while deleting this event.",
+    deleteSuccessTitle: "Deleted",
+    deleteSuccessMsg: "The special day has been successfully deleted.",
+    deleteFailTitle: "Error",
   },
   es: {
     headerTitle: "Fechas especiales",
@@ -155,6 +155,9 @@ const translations = {
     deleteCancel: "Cancelar",
     deleteBtn: "Eliminar",
     deleteFailMsg: "Hubo un error al intentar eliminar este evento.",
+    deleteSuccessTitle: "Eliminado",
+    deleteSuccessMsg: "El día especial ha sido eliminado con éxito.",
+    deleteFailTitle: "Error",
   },
 };
 

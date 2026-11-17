@@ -3,6 +3,7 @@ import { client } from "@/api/client";
 import { useRecommendLanguage } from "@/hooks/Languages/useRecommendLanguage";
 import { Recipient } from "@/types/Recipient";
 import { getPurposeList } from "@/utils/getPurposeList";
+import { toDisplayValue } from "@/utils/toDisplayValue";
 import { toRefineNumber } from "@/utils/toRefineNumber";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -23,9 +24,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RecommendScreen() {
-  const { lang, t } = useRecommendLanguage();
-
-  const PURPOSE_LIST = getPurposeList(lang);
+  const { t, lang } = useRecommendLanguage();
 
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(
     null,
@@ -33,6 +32,8 @@ export default function RecommendScreen() {
   const [eventPurpose, setEventPurpose] = useState("");
   const [minBudget, setMinBudget] = useState(0);
   const [maxBudget, setMaxBudget] = useState(0);
+
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
   const { data: recipients = [] } = useQuery<Recipient[]>({
     queryKey: ["recipients"],
@@ -42,46 +43,48 @@ export default function RecommendScreen() {
     },
   });
 
-  // 🚀 2. useMutation: 지인에게 새로운 이벤트 생성하기
-  const createEventMutation = useMutation({
-    mutationFn: async (newEventData: {
-      purpose: string;
-      min_budget: number;
-      max_budget: number;
-    }) => {
-      if (!selectedRecipientId) throw new Error(t.requiredRecipient);
-      const response = await client.post(
-        `gift/recipient/${selectedRecipientId}/event/`,
-        newEventData,
-      );
-      return response.data;
-    },
-    onSuccess: (data) => {
-      const serverEventId =
-        data.event_id || data.id || (data.event && data.event.id);
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
-      if (!serverEventId) {
-        Alert.alert(t.errorTitle, t.createEventFail);
-        return;
-      }
+  const { mutate: createEventMutate, isPending: createEventPending } =
+    useMutation({
+      mutationFn: async (newEventData: {
+        purpose: string;
+        min_budget: number;
+        max_budget: number;
+      }) => {
+        if (!selectedRecipientId) throw new Error(t.requiredRecipient);
+        const response = await client.post(
+          `gift/recipient/${selectedRecipientId}/event/`,
+          newEventData,
+        );
+        return response.data;
+      },
+      onSuccess: (data) => {
+        const serverEventId =
+          data.event_id || data.id || (data.event && data.event.id);
 
-      // 폼 리셋
-      setEventPurpose("");
-      setMinBudget(0);
-      setMaxBudget(0);
-      setSelectedRecipientId(null);
+        if (!serverEventId) {
+          Alert.alert(t.errorTitle, t.createEventFail);
+          return;
+        }
 
-      // 🎉 [핵심 변경] 등록 완료 후 결과 페이지로 event_id를 넘기며 자동 이동!
-      router.push({
-        pathname: "/recommendResult",
-        params: { event_id: serverEventId },
-      });
-    },
-    onError: (error: any) => {
-      console.error("이벤트 등록 실패:", error.response?.data);
-      Alert.alert(t.networkFailTitle, t.networkFailMsg);
-    },
-  });
+        setEventPurpose("");
+        setMinBudget(0);
+        setMaxBudget(0);
+        setSelectedRecipientId(null);
+
+        router.push({
+          pathname: "/recommendResult",
+          params: { event_id: serverEventId },
+        });
+      },
+      onError: (error: any) => {
+        console.error("이벤트 등록 실패:", error.response?.data);
+        Alert.alert(t.networkFailTitle, t.networkFailMsg);
+      },
+    });
+
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
   const handleCreateEvent = () => {
     if (!selectedRecipientId) {
@@ -108,19 +111,14 @@ export default function RecommendScreen() {
       Alert.alert(t.budgetErrorTitle, t.budgetErrorMsg);
       return;
     }
-    createEventMutation.mutate({
+    createEventMutate({
       purpose: eventPurpose,
       min_budget: Number(minBudget),
       max_budget: Number(maxBudget),
     });
   };
 
-  // 1. 숫자 또는 문자열을 천 단위 쉼표가 붙은 문자열로 변환 (화면 표시용)
-  const toDisplayValue = (value: number | string) => {
-    if (value === 0 || value === "0") return "";
-    const num = String(value).replace(/[^0-9]/g, ""); // 숫자만 남기기
-    return num ? Number(value).toLocaleString() : "";
-  };
+  ///////////////////////////////////////////////////////////////////////////////////////////
 
   return (
     <SafeAreaView
@@ -136,26 +134,23 @@ export default function RecommendScreen() {
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? -20 : -25}
       >
-        {/* 🚨 [정석 서순 2] 허공 터치 시 키보드 dismiss 레이어를 스크롤뷰 위에 얹어줍니다. */}
-
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled" // 💡 배지나 버튼 누를 때 키보드 때문에 터치가 한 번 씹히는 걸 방지해줍니다!
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContainer}>
             <Text style={styles.mainTitle}>{t.mainTitle}</Text>
 
             <Text style={styles.mainSub}>{t.mainSub}</Text>
 
-            {/* 👥 인풋 1: 선물 대상 선택 */}
             <Text style={styles.inputLabel}>{t.selectRecipient}</Text>
-            {/* 지인 가로 스크롤 영역 */}
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.recipientSelector}
-              keyboardShouldPersistTaps="handled" // 👈 여기도 추가하면 지인 배지 누를 때 키보드가 바로 안 내려가고 찰떡같이 선택됩니다.
+              keyboardShouldPersistTaps="handled"
             >
               <TouchableOpacity
                 style={[
@@ -210,10 +205,9 @@ export default function RecommendScreen() {
               ))}
             </ScrollView>
 
-            {/* 🎁 인풋 2: 선물 목적 */}
             <Text style={styles.inputLabel}>{t.occasionLabel}</Text>
             <View style={styles.gridContainer}>
-              {PURPOSE_LIST.map((item) => {
+              {getPurposeList(lang).map((item) => {
                 const isSelected = eventPurpose === item.code;
                 return (
                   <TouchableOpacity
@@ -237,7 +231,6 @@ export default function RecommendScreen() {
               })}
             </View>
 
-            {/* 💰 인풋 3: 예산 범위 설정 */}
             <Text style={styles.inputLabel}>{t.budgetLabel}</Text>
             <View style={styles.budgetRow}>
               <View style={styles.budgetRow}>
@@ -246,9 +239,9 @@ export default function RecommendScreen() {
                     style={styles.textInput}
                     placeholder={t.minBudgetPlaceholder}
                     placeholderTextColor="#AEAEB2"
-                    keyboardType="number-pad" 
-                    value={toDisplayValue(minBudget)} 
-                    onChangeText={(text) => setMinBudget(toRefineNumber(text))} // 숫자로만 정제해서 state 저장
+                    keyboardType="number-pad"
+                    value={toDisplayValue(minBudget)}
+                    onChangeText={(text) => setMinBudget(toRefineNumber(text))}
                   />
                 </View>
 
@@ -260,23 +253,22 @@ export default function RecommendScreen() {
                     placeholder={t.maxBudgetPlaceholder}
                     placeholderTextColor="#AEAEB2"
                     keyboardType="number-pad"
-                    value={toDisplayValue(maxBudget)} // 숫자를 쉼표 문자열로 바꿔서 보여줌
-                    onChangeText={(text) => setMaxBudget(toRefineNumber(text))} // 숫자로만 정제해서 state 저장
+                    value={toDisplayValue(maxBudget)}
+                    onChangeText={(text) => setMaxBudget(toRefineNumber(text))}
                   />
                 </View>
               </View>
             </View>
 
-            {/* 🤖 추천받기 제출 버튼 */}
             <TouchableOpacity
               style={[
                 styles.modalSubmitButton,
-                createEventMutation.isPending && styles.disabledButton,
+                createEventPending && styles.disabledButton,
               ]}
               onPress={handleCreateEvent}
-              disabled={createEventMutation.isPending}
+              disabled={createEventPending}
             >
-              {createEventMutation.isPending ? (
+              {createEventPending ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
@@ -292,6 +284,8 @@ export default function RecommendScreen() {
     </SafeAreaView>
   );
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class RecommendRequest(BaseModel):
     purpose: str
     age_group: str
@@ -12,11 +13,9 @@ class RecommendRequest(BaseModel):
 
 
 class RecommendResponse(BaseModel):
-    product_name: (
-        str  # 구체적인 상품명
-    )
-    product_price: int  # AI가 예측한 대략적인 예산 가격
-    recommendation_reason: str  # 유저에게 보여줄 감동적인 추천 이유
+    product_name: str  # 구체적인 상품명
+    product_price: int  # AI가 예측한 예산 가격
+    recommendation_reason: str  # AI 추천 이유
 
 
 class RecommendListResponse(BaseModel):

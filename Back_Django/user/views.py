@@ -13,17 +13,9 @@ import jwt
 import requests
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from rest_framework_simplejwt.tokens import RefreshToken
+from utils.get_tokens_for_user import get_tokens_for_user
 
 User = get_user_model()
-
-
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-    }
 
 
 class SignUpView(APIView):
@@ -52,91 +44,7 @@ class SignUpView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-###########################################
-
-
-class MyProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    #  마이페이지 내 정보 조회
-    def get(self, request):
-        login_user = request.user
-        serializer = UserSerializer(login_user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    #  마이페이지 내 정보 수정
-    def patch(self, request):
-        login_user = request.user
-
-        incoming_token = request.data.get("push_token")
-        if incoming_token:
-            print(
-                f"\n📡 [FCM 토큰 동기화 요청 수신] 유저: {login_user.email} | 토큰: {incoming_token}"
-            )
-
-        serializer = UserSerializer(login_user, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-
-            if incoming_token:
-                print(
-                    f"🎯 [동기화 완료] {login_user.email} 유저의 push_token 필드가 업데이트되었습니다.\n"
-                )
-
-            return Response(
-                {
-                    "message": "회원 정보가 성공적으로 수정되었습니다.",
-                    "user": serializer.data,
-                },
-                status=status.HTTP_200_OK,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # 회원 탈퇴 (계정 및 연관 데이터 영구 삭제)
-    def delete(self, request):
-        login_user = request.user
-
-        login_user.delete()
-
-        return Response(
-            {
-                "message": f"회원 탈퇴가 완료되었습니다. 그동안 서비스를 이용해 주셔서 감사합니다."
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-###########################################
-
-
-class PushTokenView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        login_user = request.user
-
-        serializer = PushTokenUpdateSerializer(
-            login_user, data=request.data, partial=True
-        )
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {
-                    "message": "디바이스 푸시 토큰이 성공적으로 등록되었습니다. 🎯",
-                    "user": {
-                        "username": login_user.username,
-                        "push_token": login_user.push_token,
-                    },
-                },
-                status=status.HTTP_200_OK,
-            )
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-########################################
+#########################################################################################
 
 
 class LoginView(APIView):
@@ -178,7 +86,7 @@ class LoginView(APIView):
         )
 
 
-########################################
+#########################################################################################
 
 
 class GoogleLoginView(APIView):
@@ -217,17 +125,17 @@ class GoogleLoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 🌟 회원 조회 및 생성
+        #  회원 조회 및 생성
         user = User.objects.filter(
             social_provider="google", social_uid=social_id
         ).first()
 
         if not user:
-            # 2. 소셜 가입은 없는데, 이미 같은 이메일로 가입된 유저가 있는지 체크합니다.
+            # 소셜 가입은 없는데, 이미 같은 이메일로 가입된 유저가 있는지 체크
             existing_email_user = User.objects.filter(email=email).first()
 
             if existing_email_user:
-                # 이미 이메일이 존재하면 해당 계정에 소셜 연동을 업데이트하고 로그인 시켜줍니다.
+                # 이미 이메일이 존재하면 해당 계정에 소셜 연동을 업데이트하고 로그인 시킴.
                 user = existing_email_user
                 user.social_provider = "google"
                 user.social_uid = social_id
@@ -243,10 +151,11 @@ class GoogleLoginView(APIView):
                 )
 
         tokens = get_tokens_for_user(user)
+
         return Response({"tokens": tokens}, status=status.HTTP_200_OK)
 
 
-###########################################
+##########################################################################################
 
 
 class AppleLoginView(APIView):
@@ -284,9 +193,7 @@ class AppleLoginView(APIView):
             )
 
             social_id = payload.get("sub")
-            email = payload.get(
-                "email"
-            )  # ⚠️ 주의: 두 번째 로그인부터는 None으로 올 수 있음
+            email = payload.get("email")
 
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return Response(
@@ -294,26 +201,25 @@ class AppleLoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 1. 먼저 애플 고유의 social_uid로 가입된 유저가 이미 있는지 찾습니다.
+        #  먼저 애플 고유의 social_uid로 가입된 유저가 이미 있는지 찾기
         user = User.objects.filter(
             social_provider="apple", social_uid=social_id
         ).first()
 
         if not user:
-            # 2. 기존 소셜 가입이 없다면, '이메일'이 제공되었을 때 한해서만 중복 이메일 유저를 찾습니다.
+            #  기존 소셜 가입이 없다면, '이메일'이 제공되었을 때 한해서만 중복 이메일 유저를 찾기
             existing_email_user = None
             if email:
                 existing_email_user = User.objects.filter(email=email).first()
 
             if existing_email_user:
-                # [Case A] 소셜 가입 기록은 없는데 동일한 이메일 유저가 있다면, 해당 계정에 애플 연동 정보를 업데이트합니다.
+                # 소셜 가입 기록은 없는데 동일한 이메일 유저가 있다면, 해당 계정에 애플 연동 정보를 업데이트
                 user = existing_email_user
                 user.social_provider = "apple"
                 user.social_uid = social_id
                 user.save()
             else:
-                # [Case B] 완전히 새로운 유저인 경우 가입을 진행합니다.
-                # 두 번째 로그인부터는 email이 안 오기 때문에, 첫 가입 때 무조건 이메일을 확정 지어 둡니다.
+                # 완전히 새로운 유저인 경우 가입을 진행
                 final_email = email if email else f"apple_{social_id}@golazo.ai"
 
                 user = User.objects.create(
@@ -324,6 +230,94 @@ class AppleLoginView(APIView):
                     nickname=f"회원_{social_id[:6]}",
                 )
 
-        # 3. 토큰 발급 및 로그인 완료
+        #  토큰 발급 및 로그인 완료
         tokens = get_tokens_for_user(user)
         return Response({"tokens": tokens}, status=status.HTTP_200_OK)
+
+
+#############################################################################################
+
+
+class MyProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    #  마이페이지 내 정보 조회
+    def get(self, request):
+        login_user = request.user
+        serializer = UserSerializer(login_user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    ##################################################################
+
+    #  마이페이지 내 정보 수정
+    def patch(self, request):
+        login_user = request.user
+
+        incoming_token = request.data.get("push_token")
+        if incoming_token:
+            print(
+                f"\n [FCM 토큰 동기화 요청 수신] 유저: {login_user.email} | 토큰: {incoming_token}"
+            )
+
+        serializer = UserSerializer(login_user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            if incoming_token:
+                print(
+                    f" [동기화 완료] {login_user.email} 유저의 push_token 필드가 업데이트되었습니다.\n"
+                )
+
+            return Response(
+                {
+                    "message": "회원 정보가 성공적으로 수정되었습니다.",
+                    "user": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    ##################################################################
+
+    # 회원 탈퇴
+    def delete(self, request):
+        login_user = request.user
+
+        login_user.delete()
+
+        return Response(
+            {
+                "message": f"회원 탈퇴가 완료되었습니다. 그동안 서비스를 이용해 주셔서 감사합니다."
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+#########################################################################################
+
+
+class PushTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        login_user = request.user
+
+        serializer = PushTokenUpdateSerializer(
+            login_user, data=request.data, partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "디바이스 푸시 토큰이 성공적으로 등록되었습니다. ",
+                    "user": {
+                        "username": login_user.username,
+                        "push_token": login_user.push_token,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

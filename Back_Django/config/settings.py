@@ -6,10 +6,10 @@ from datetime import timedelta
 
 env = environ.Env(DEBUG=(bool, False))
 
-# 루트 디렉토리의 .env 파일을 읽어옵니다.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
 
 DATABASES = {
     "default": dj_database_url.config(
@@ -28,7 +28,6 @@ ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -131,7 +130,7 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
         days=1
-    ),  # 액세스 토큰 유효기간 (개발용으로 1일 세팅)
+    ), 
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # 리프레시 토큰 유효기간 (7일)
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,

@@ -39,7 +39,7 @@ client.interceptors.response.use(
 
       try {
         await SecureStore.deleteItemAsync("userToken");
-        router.replace("/(auth)/login");
+        router.replace("/login");
       } catch (storeError) {
         console.error("토큰 삭제 중 에러 발생:", storeError);
       }

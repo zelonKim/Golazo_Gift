@@ -59,10 +59,9 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user
 
 
-###################################
+#######################################################################
 
 
-# 1. 이벤트용 시리얼라이저
 class EventHistorySerializer(serializers.ModelSerializer):
     purpose_display = serializers.CharField(
         source="get_purpose_display", read_only=True
@@ -82,7 +81,9 @@ class EventHistorySerializer(serializers.ModelSerializer):
         ]
 
 
-# 2. 지인용 시리얼라이저 (여기서 events 역참조 발생!)
+#######################################################################
+
+
 class RecipientHistorySerializer(serializers.ModelSerializer):
     events = EventHistorySerializer(many=True, read_only=True)
 
@@ -91,7 +92,9 @@ class RecipientHistorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "events"]
 
 
-# 3. 내 정보(MyProfileView) 전용 유저 시리얼라이저
+#######################################################################
+
+
 class UserSerializer(serializers.ModelSerializer):
     recipients = RecipientHistorySerializer(many=True, read_only=True)
 
@@ -101,7 +104,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "username", "email", "recipients"]
 
 
-###############################
+#######################################################################
 
 
 class PushTokenUpdateSerializer(serializers.ModelSerializer):

@@ -23,8 +23,8 @@ def send_expo_push_notification(user, token, title, body):
         "title": title,
         "body": body,
         "data": {"user_id": user.id},
-        "priority": "high",  # 💡 필수: 안드로이드 포그라운드 즉시 처리를 위한 고우선순위
-        "channelId": "default",  # 💡 필수: 앱에서 setNotificationChannelAsync로 생성한 ID와 동일
+        "priority": "high",  
+        "channelId": "default",
     }
 
     headers = {
@@ -56,7 +56,7 @@ def send_expo_push_notification(user, token, title, body):
                 # 유효하지 않거나 만료된 토큰 자동 정리
                 if error_code in ["DeviceNotRegistered", "InvalidCredentials"]:
                     print(
-                        f"🧹 [자동 정제] 만료된 토큰이므로 {user.email} 유저의 토큰을 초기화합니다."
+                        f" [자동 정제] 만료된 토큰이므로 {user.email} 유저의 토큰을 초기화합니다."
                     )
                     user.push_token = None
                     user.save(update_fields=["push_token"])
@@ -66,8 +66,7 @@ def send_expo_push_notification(user, token, title, body):
     except requests.exceptions.RequestException as e:
         print(f"❌ [네트워크 통신 에러 - {user.email}]: {e}")
 
-
-
+###################################################################################################
 
 def check_anniversaries_and_notify():
     print("⏰ [배치 작업 시작] 기념일 및 디데이 체크 중...")

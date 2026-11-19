@@ -1,5 +1,4 @@
 import os
-
 import requests
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -27,14 +26,16 @@ class RecipientView(APIView):
     # 내 지인 목록 전체 조회
     def get(self, request):
         login_user = request.user
-        # 💡 로그인한 유저가 등록한 지인들만 필터링해서 가져옴 (최신순)
+        # 로그인한 유저가 등록한 지인들만 필터링해서 가져옴
         recipients = Recipient.objects.filter(user=login_user).order_by("-created_at")
 
         # 목록 조회가 가능하도록 many=True 옵션 필수!
         serializer = RecipientSerializer(recipients, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # B. 선물 상대방 정보 등록
+    #######################################################
+
+    #  선물 상대방 정보 등록
     def post(self, request):
         login_user = request.user
         serializer = RecipientSerializer(data=request.data)
@@ -52,7 +53,7 @@ class RecipientView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-############################
+####################################################################################
 
 
 class RecipientDetailView(APIView):
@@ -68,6 +69,8 @@ class RecipientDetailView(APIView):
 
         serializer = RecipientSerializer(recipient)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    ################################################################
 
     # 선물 상대방 정보 수정
     def patch(self, request, recipient_id):
@@ -90,6 +93,8 @@ class RecipientDetailView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    ################################################################
+
     # 선물 상대방 정보 삭제
     def delete(self, request, recipient_id):
         login_user = request.user
@@ -109,7 +114,7 @@ class RecipientDetailView(APIView):
         )
 
 
-##################################################################
+#############################################################################################
 
 
 class EventView(APIView):
@@ -124,6 +129,8 @@ class EventView(APIView):
         events = Event.objects.filter(recipient=recipient)
         serializer = EventSerializer(events, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    ###############################################################
 
     # 특정 상대방에게 새로운 이벤트 등록
     def post(self, request, recipient_id):
@@ -147,7 +154,7 @@ class EventView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-########################################
+###########################################################################################
 
 
 class EventDetailView(APIView):
@@ -155,27 +162,28 @@ class EventDetailView(APIView):
 
     # 특정 이벤트 상세 조회
     def get(self, request, event_id):
-        # 1. 조회할 이벤트 획득 (없으면 404)
+        #  조회할 이벤트 획득
         event = get_object_or_404(Event, id=event_id)
 
-        # 🚨 [철벽 방어] 이 이벤트의 소유권이 현재 로그인한 유저가 맞는지 검증
+        # 이 이벤트의 소유권이 현재 로그인한 유저가 맞는지 검증
         if event.recipient.user != request.user:
             raise PermissionDenied("해당 이벤트 조회할 권한이 없습니다.")
 
-        # 2. 시리얼라이저를 통해 단건 데이터를 JSON으로 변환 후 반환
+        #  시리얼라이저를 통해 단건 데이터를 JSON으로 변환 후 반환
         serializer = EventSerializer(event)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    ###############################################################
+
     # 특정 이벤트 정보 부분 수정
     def patch(self, request, event_id):
-        # 1. 수정할 이벤트 조회
+        #  수정할 이벤트 조회
         event = get_object_or_404(Event, id=event_id)
 
-        # [철벽 방어] 내 지인의 이벤트가 맞는지 검증
+        #  내 지인의 이벤트가 맞는지 검증
         if event.recipient.user != request.user:
             raise PermissionDenied("해당 이벤트를 수정할 권한이 없습니다.")
 
-        # partial=True 옵션으로 원하는 필드만 쏙쏙 수정
         serializer = EventSerializer(event, data=request.data, partial=True)
 
         event_purpose = event.purpose
@@ -192,16 +200,18 @@ class EventDetailView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    ###############################################################
+
     # 특정 이벤트 삭제
     def delete(self, request, event_id):
-        # 1. 삭제할 이벤트 조회
+        # 삭제할 이벤트 조회
         event = get_object_or_404(Event, id=event_id)
 
-        # 🚨 [철벽 방어] 권한 검증
+        #  권한 검증
         if event.recipient.user != request.user:
             raise PermissionDenied("해당 이벤트를 삭제할 권한이 없습니다.")
 
-        # 2. DB에서 이벤트 깔끔하게 삭제
+        # DB에서 이벤트 깔끔하게 삭제
         event.delete()
 
         return Response(
@@ -210,7 +220,7 @@ class EventDetailView(APIView):
         )
 
 
-##################################################################
+#########################################################################################
 
 
 class GiftRecommendView(APIView):
@@ -254,7 +264,7 @@ class GiftRecommendView(APIView):
             for prod in recommendations:
                 raw_keyword = prod.get("product_name", "")
 
-                # 1. 아마존 API 호출
+                #  아마존 API 호출
                 amazon_info = get_amazon_product(
                     search_keyword=raw_keyword,
                     min_budget=event.min_budget,
@@ -273,7 +283,7 @@ class GiftRecommendView(APIView):
                     else raw_keyword
                 )
 
-                # 2. DB 저장 (product_url, image_url, search_keyword 직접 저장)
+                # DB 저장
                 obj = RecommendedProduct.objects.create(
                     event=event,
                     product_name=final_product_name,
@@ -287,7 +297,7 @@ class GiftRecommendView(APIView):
 
                 created_products.append(obj)
 
-            # 3. DB에 저장된 객체를 Serializer로 직렬화하여 반환
+            #  DB에 저장된 객체를 Serializer로 직렬화하여 반환
             serializer = RecommendedProductSerializer(created_products, many=True)
 
             return Response(
@@ -310,7 +320,7 @@ class GiftRecommendView(APIView):
             )
 
 
-#################################################################
+#####################################################################################
 
 
 # 특정 이벤트에 속한 추천 상품 목록 조회
@@ -318,21 +328,21 @@ class RecommendedProductListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, event_id):
-        # 1. 해당 이벤트가 존재하는지, 로그인한 유저의 소유가 맞는지 검증
+        # 해당 이벤트가 존재하는지, 로그인한 유저의 소유가 맞는지 검증
         event = get_object_or_404(Event, id=event_id)
         if event.recipient.user != request.user:
             raise PermissionDenied("추천 내역을 조회할 권한이 없습니다.")
 
-        # 2. 이 이벤트로 저장된 추천 상품들 DB에서 즉시 조회
+        # 이 이벤트로 저장된 추천 상품들 DB에서 즉시 조회
         products = RecommendedProduct.objects.filter(event=event).order_by("id")
 
-        # 3. Serializer를 통해 DB 데이터를 JSON으로 바로 변환하여 반환
+        # Serializer를 통해 DB 데이터를 JSON으로 바로 변환하여 반환
         serializer = RecommendedProductSerializer(products, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-############################
+######################################################################################
 
 
 class RecommendedProductDetailView(APIView):
@@ -354,16 +364,15 @@ class RecommendedProductDetailView(APIView):
         )
 
 
-#################################################################
+######################################################################################
 
 
 class DateMemoView(APIView):
     permission_classes = [IsAuthenticated]
 
-    #  지인 메모 목록 조회 (+ 실시간 D-Day 계산)
+    #  지인 메모 목록 조회
     def get(self, request):
         login_user = request.user
-        # 다가오는 기념일 날짜 순서대로 정렬해서 긁어오기
         memos = DateMemo.objects.filter(user=login_user).order_by("target_date")
 
         today = date.today()
@@ -375,7 +384,7 @@ class DateMemoView(APIView):
 
             try:
                 this_year_target = memo.target_date.replace(year=today.year)
-                # 만약 올해 기념일이 이미 지났다면 내년 기념일 기준으로 계산
+
                 if this_year_target < today:
                     this_year_target = memo.target_date.replace(year=today.year + 1)
 
@@ -387,6 +396,8 @@ class DateMemoView(APIView):
             response_data.append(memo_dict)
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    ###############################################################
 
     # 지인 메모 신규 등록
     def post(self, request):
@@ -406,17 +417,17 @@ class DateMemoView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-##################################################################
+#####################################################################################
 
 
 class DateMemoDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    # 특정 메모 단건 상세 조회 (+ D-Day 계산)
+    # 특정 메모 단건 상세 조회
     def get(self, request, memo_id):
         memo = get_object_or_404(DateMemo, id=memo_id)
 
-        # [철벽 방어] 내 메모가 맞는지 검증
+        #  내 메모가 맞는지 검증
         if memo.user != request.user:
             raise PermissionDenied("해당 메모를 조회할 권한이 없습니다.")
 
@@ -435,6 +446,8 @@ class DateMemoDetailView(APIView):
 
         return Response(memo_dict, status=status.HTTP_200_OK)
 
+    ########################################################
+
     # 특정 메모 부분 수정
     def patch(self, request, memo_id):
         memo = get_object_or_404(DateMemo, id=memo_id)
@@ -442,7 +455,6 @@ class DateMemoDetailView(APIView):
         if memo.user != request.user:
             raise PermissionDenied("해당 메모를 수정할 권한이 없습니다.")
 
-        # partial=True로 이름이나 날짜 중 하나만 보내도 에러 없이 갱신 가능하게 세팅
         serializer = DateMemoSerializer(memo, data=request.data, partial=True)
 
         if serializer.is_valid():
@@ -455,6 +467,8 @@ class DateMemoDetailView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    ########################################################
 
     # 특정 메모 삭제
     def delete(self, request, memo_id):
@@ -471,7 +485,7 @@ class DateMemoDetailView(APIView):
         )
 
 
-###########################################
+######################################################################################
 
 
 class GiftQuickRecommendView(APIView):
@@ -486,7 +500,7 @@ class GiftQuickRecommendView(APIView):
         min_budget = request.data.get("min_budget", 0)
         max_budget = request.data.get("max_budget", 999999)
 
-        # 2. FastAPI 엔진으로 전달할 데이터 조립
+        # FastAPI 엔진으로 전달할 데이터 조립
         fastapi_url = os.environ.get("FASTAPI_URL") + "api/v1/recommend"
 
         payload = {
@@ -510,7 +524,7 @@ class GiftQuickRecommendView(APIView):
             recommendations = response.json()
             response_data = []
 
-            # 4. 추천 결과를 돌며 아마존 상품 매칭 프로세스 수행 (RapidAPI 기반)
+            # 추천 결과를 돌며 아마존 상품 매칭 프로세스 수행 
             for prod in recommendations:
                 product_name = prod.get("product_name")
 
@@ -520,14 +534,14 @@ class GiftQuickRecommendView(APIView):
                     max_budget=max_budget,
                 )
 
-                # 💡 실시간 아마존 수집 가격이 존재하면 사용하고, 없으면 AI가 임시 제안한 기본 가격 적용
+                # 실시간 아마존 수집 가격이 존재하면 사용하고, 없으면 AI가 임시 제안한 기본 가격 적용
                 final_price = (
                     amazon_info["price"]
                     if amazon_info["price"] > 0
                     else prod.get("product_price", 0)
                 )
 
-                # 💡 실시간 수집된 실제 아마존 상품명이 존재하면 사용, 없으면 AI 추천 키워드 사용
+                #  실시간 수집된 실제 아마존 상품명이 존재하면 사용, 없으면 AI 추천 키워드 사용
                 final_product_name = (
                     amazon_info["product_name"]
                     if amazon_info["product_name"]

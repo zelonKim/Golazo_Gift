@@ -22,7 +22,7 @@ class RecipientSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
-###########################################
+###################################################################################################
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -58,7 +58,7 @@ class EventSerializer(serializers.ModelSerializer):
         return data
 
 
-###########################################
+###################################################################################################
 
 
 class RecommendedProductSerializer(serializers.ModelSerializer):
@@ -79,7 +79,7 @@ class RecommendedProductSerializer(serializers.ModelSerializer):
         ]
 
 
-###########################################
+###################################################################################################
 
 
 class DateMemoSerializer(serializers.ModelSerializer):

@@ -22,13 +22,16 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "FastAPI 엔진이 정상 작동 중입니다."}
+    return {"message": "FastAPI Server is running"}
+
+
+#############################################################################################
 
 
 @app.post("/api/v1/recommend", response_model=list[RecommendResponse])
 async def get_recommendation(request: RecommendRequest):
     try:
-        # 1. 미국 감성의 전문 큐레이터 페르소나 설정
+        # 미국 감성의 전문 큐레이터 페르소나 설정
         system_prompt = (
             "You are the ultimate gift curator and a trendy gift recommendation AI assistant.\n"
             "Analyze the recipient's details (age, gender, interests, budget) and recommend "
@@ -43,7 +46,7 @@ async def get_recommendation(request: RecommendRequest):
         }
         gender_str = gender_mapping.get(request.gender, "Prefer not to say")
 
-        # 2. 달러(USD) 기반 및 미국 쇼핑 패턴을 고려한 User Prompt
+        #  달러 기반 및 미국 쇼핑 패턴을 고려한 유저 프롬프트
         user_prompt = f"""
             [Recipient & Occasion Details]
             - Occasion/Purpose: {request.purpose}

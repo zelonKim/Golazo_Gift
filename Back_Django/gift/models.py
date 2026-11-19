@@ -66,7 +66,7 @@ class Recipient(models.Model):
         return f"{self.user.username}'s friend: {self.name}"
 
 
-##########################
+###################################################################################################
 
 
 class Event(models.Model):
@@ -116,10 +116,8 @@ class Event(models.Model):
         return f"{self.recipient.name} - {self.get_purpose_display()} "
 
 
-############################
+###################################################################################################
 
-
-from django.db import models
 
 
 class RecommendedProduct(models.Model):
@@ -143,7 +141,7 @@ class RecommendedProduct(models.Model):
 
     product_price = models.PositiveIntegerField(default=0, verbose_name="상품 가격")
 
-    # 💡 1. 이미지 URL 저장 필드 추가 (Amazon CDN 길이를 고려해 max_length 설정)
+    # 이미지 URL 저장 필드 추가 (Amazon CDN 길이를 고려해 max_length 설정)
     image_url = models.URLField(
         max_length=1000,
         blank=True,
@@ -151,7 +149,7 @@ class RecommendedProduct(models.Model):
         verbose_name="상품 이미지 URL",
     )
 
-    # 💡 2. 아마존 최종 어소시에이트 구매 링크 (기존 actual_affiliate_url 대체/통일)
+    #  아마존 최종 어소시에이트 구매 링크 (기존 actual_affiliate_url 대체/통일)
     product_url = models.URLField(
         max_length=1000,
         blank=True,
@@ -159,7 +157,7 @@ class RecommendedProduct(models.Model):
         verbose_name="상품 구매 URL",
     )
 
-    # 💡 3. AI가 아마존 검색에 활용한 원본 키워드 (null 허용)
+    # AI가 아마존 검색에 활용한 원본 키워드 (null 허용)
     search_keyword = models.CharField(
         max_length=255,
         blank=True,
@@ -178,7 +176,7 @@ class RecommendedProduct(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="추천 일시")
 
-    # 💡 4. 정보 수정 시점 추적용 (선택)
+    # 정보 수정 시점 추적용 (선택)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="수정 일시")
 
     class Meta:
@@ -190,7 +188,7 @@ class RecommendedProduct(models.Model):
         return f"[{self.event.recipient.name}] {self.product_name} ({self.get_status_display()})"
 
 
-##########################
+###################################################################################################
 
 
 class DateMemo(models.Model):
